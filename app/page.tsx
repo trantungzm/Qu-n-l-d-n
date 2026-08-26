@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ArrowRight } from 'lucide-react';
 import { CreateProjectDialog } from '@/components/create-project-dialog';
 
 interface Project {
@@ -14,6 +15,7 @@ interface Project {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -94,15 +96,26 @@ export default function Home() {
                   <p className="text-gray-700 mb-4 line-clamp-3">
                     {project.description || 'Không có mô tả'}
                   </p>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(project.id)}
-                    className="w-full"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Xóa dự án
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push(`/projects/${project.id}`)}
+                      className="flex-1"
+                    >
+                      <ArrowRight className="mr-2 h-4 w-4" />
+                      Xem chi tiết
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(project.id)}
+                      className="flex-1"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Xóa
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
