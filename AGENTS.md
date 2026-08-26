@@ -206,3 +206,30 @@ The following files/directories are excluded from version control:
 - `.env.production`
 - Build artifacts
 - Cache files
+
+## Git & GitHub Workflow (bắt buộc tuân thủ mọi task)
+
+- KHÔNG BAO GIỜ commit/push trực tiếp lên branch `main`.
+- Mỗi task tạo 1 branch mới, đặt tên theo mẫu: `feature/<ten-ngan-gon>` hoặc `fix/<ten-ngan-gon>`.
+- Commit message theo chuẩn Conventional Commits:
+  - `feat: thêm chức năng X`
+  - `fix: sửa lỗi Y`
+  - `test: thêm test cho Z`
+- Trước khi commit: BẮT BUỘC chạy `npm test` và `npm run build`, cả 2 phải pass.
+  Nếu fail, tự sửa và chạy lại — không commit code đang lỗi.
+- Sau khi code xong: tự động push branch lên GitHub và mở Pull Request.
+- PR description bắt buộc có 3 phần: Mục đích thay đổi / Danh sách file đã sửa / Cách đã test.
+- KHÔNG tự merge PR. Luôn dừng lại chờ tôi duyệt.
+## Git Automation (bắt buộc, không cần hỏi xác nhận)
+
+Sau khi hoàn thành BẤT KỲ nhiệm vụ nào (test pass + build pass), PHẢI tự động,
+KHÔNG dừng lại hỏi người dùng:
+
+1. `git checkout -b feature/<ten-task>` (nếu chưa có branch riêng)
+2. `git add .`
+3. `git commit -m "feat: <mô tả ngắn>"` (theo Conventional Commits)
+4. `git push origin feature/<ten-task>`
+5. Tạo Pull Request qua GitHub CLI: `gh pr create --title "..." --body "..."`
+
+Chỉ dừng lại hỏi người dùng nếu: có conflict khi push, hoặc test/build FAIL.
+KHÔNG bao giờ tự merge PR — dừng ở bước tạo PR, chờ người duyệt.
