@@ -15,20 +15,32 @@
 Quan_ly_du_an/
 ├── app/                          # Next.js App Router directory
 │   ├── api/                      # API routes
-│   │   └── projects/             # Project CRUD endpoints
-│   │       ├── route.ts          # GET (list), POST (create)
+│   │   ├── projects/             # Project CRUD endpoints
+│   │   │   ├── route.ts          # GET (list), POST (create)
+│   │   │   └── [id]/             # Dynamic routes
+│   │   │       ├── route.ts      # DELETE (delete)
+│   │   │       └── tasks/        # Task endpoints for project
+│   │   │           └── route.ts  # GET (list), POST (create)
+│   │   └── tasks/                # Task CRUD endpoints
 │   │       └── [id]/             # Dynamic routes
-│   │           └── route.ts      # DELETE (delete)
+│   │           └── route.ts      # PATCH (update), DELETE (delete)
 │   ├── globals.css               # Global styles
 │   ├── layout.tsx                # Root layout
-│   └── page.tsx                  # Home page (project list)
+│   ├── page.tsx                  # Home page (project list)
+│   └── projects/                 # Project pages
+│       └── [id]/                 # Dynamic project detail page
+│           └── page.tsx          # Project detail with task list
 ├── components/                   # React components
 │   ├── create-project-dialog.tsx # Project creation modal
+│   ├── create-task-dialog.tsx    # Task creation modal
 │   └── ui/                       # UI components (shadcn/ui style)
 │       ├── button.tsx
 │       ├── card.tsx
 │       ├── dialog.tsx
 │       └── input.tsx
+├── __tests__/                    # Test files
+│   └── api/                      # API tests
+│       └── tasks.test.ts         # Task API tests
 ├── lib/                          # Utility libraries
 │   ├── prisma.ts                 # Prisma client singleton
 │   └── utils.ts                  # Utility functions (cn helper)
@@ -40,6 +52,8 @@ Quan_ly_du_an/
 ├── .env                          # Environment variables
 ├── .gitignore                    # Git ignore rules
 ├── AGENTS.md                     # This file
+├── jest.config.js                # Jest configuration
+├── jest.setup.js                 # Jest setup file
 ├── next.config.js                # Next.js configuration
 ├── package.json                  # Dependencies and scripts
 ├── postcss.config.js             # PostCSS configuration
@@ -56,6 +70,19 @@ model Project {
   name        String
   description String?
   createdAt   DateTime @default(now())
+  tasks       Task[]
+}
+```
+
+### Task Model
+```prisma
+model Task {
+  id        String   @id @default(uuid())
+  title     String
+  done      Boolean  @default(false)
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 ```
 
@@ -96,6 +123,24 @@ model Project {
 - Deletes a project by ID
 - Response: `{ success: true }`
 
+### GET /api/projects/[id]/tasks
+- Returns all tasks for a specific project ordered by creation date (newest first)
+- Response: `Task[]`
+
+### POST /api/projects/[id]/tasks
+- Creates a new task for a specific project
+- Body: `{ title: string }`
+- Response: `Task` (201 status)
+
+### PATCH /api/tasks/[id]
+- Updates a task (done status)
+- Body: `{ done: boolean }`
+- Response: `Task`
+
+### DELETE /api/tasks/[id]
+- Deletes a task by ID
+- Response: `{ success: true }`
+
 ## Available Scripts
 
 ```bash
@@ -103,6 +148,8 @@ npm run dev          # Start development server
 npm run build        # Build for production
 npm run start        # Start production server
 npm run lint         # Run ESLint
+npm test             # Run Jest tests
+npm run test:watch   # Run Jest tests in watch mode
 ```
 
 ## Prisma Commands
@@ -122,6 +169,28 @@ npx prisma studio    # Open Prisma Studio
 - Custom shadcn/ui components implemented without external CLI
 - Responsive design with mobile-first approach
 - Vietnamese language interface
+- Testing with Jest and React Testing Library
+- Tests located in `__tests__/` directory following project structure
+
+## Testing
+
+### Test Structure
+- API tests: `__tests__/api/*.test.ts`
+- Component tests: `__tests__/components/*.test.tsx`
+- Utility tests: `__tests__/lib/*.test.ts`
+
+### Running Tests
+```bash
+npm test              # Run all tests once
+npm run test:watch    # Run tests in watch mode
+```
+
+### Test Conventions
+- Mock external dependencies (Prisma, API calls)
+- Test files should end with `.test.ts` or `.test.tsx`
+- Use descriptive test names
+- Group related tests with `describe` blocks
+- Mock Prisma client for database operations
 
 ## Environment Variables
 
