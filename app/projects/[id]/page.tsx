@@ -2,15 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Plus, Trash2, Check } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { CreateTaskDialog } from '@/components/create-task-dialog';
+import { TASK_STATUSES, type TaskStatus } from '@/lib/task-status';
 
 interface Task {
   id: string;
   title: string;
-  done: boolean;
+  status: TaskStatus;
   projectId: string;
   createdAt: string;
 }
@@ -22,6 +33,92 @@ interface Project {
   createdAt: string;
 }
 
+const statusLabels: Record<TaskStatus, string> = {
+  todo: 'Todo',
+  doing: 'Doing',
+  done: 'Done',
+};
+
+const columnStyles: Record<TaskStatus, string> = {
+  todo: 'border-sky-200 bg-sky-50',
+  doing: 'border-amber-200 bg-amber-50',
+  done: 'border-emerald-200 bg-emerald-50',
+};
+
+function TaskCard({ task, onDelete }: { task: Task; onDelete: (taskId: string) => void }) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: task.id,
+  });
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      }
+    : undefined;
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className="cursor-grab active:cursor-grabbing overflow-hidden border border-gray-200 bg-white shadow-sm"
+    >
+      <CardContent className="p-3">
+        <div className="flex items-start justify-between gap-2">
+          <p className="flex-1 text-sm font-medium text-gray-800">{task.title}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(task.id)}
+            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TaskColumn({
+  status,
+  tasks,
+  onDelete,
+}: {
+  status: TaskStatus;
+  tasks: Task[];
+  onDelete: (taskId: string) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: status });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-xl border-2 p-4 min-h-[420px] ${columnStyles[status]} ${
+        isOver ? 'ring-2 ring-blue-300 ring-offset-1' : ''
+      }`}
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">{statusLabels[status]}</h3>
+        <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-gray-700">
+          {tasks.length}
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        {tasks.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-gray-300 bg-white/50 p-4 text-center text-sm text-gray-500">
+            Chưa có task nào
+          </div>
+        ) : (
+          tasks.map((task) => <TaskCard key={task.id} task={task} onDelete={onDelete} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -31,6 +128,8 @@ export default function ProjectDetailPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const fetchProject = async () => {
     try {
@@ -57,35 +156,15 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleToggleTask = async (taskId: string, currentDone: boolean) => {
-    try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ done: !currentDone }),
-      });
-
-      if (response.ok) {
-        setTasks(tasks.map(task => 
-          task.id === taskId ? { ...task, done: !currentDone } : task
-        ));
-      }
-    } catch (error) {
-      console.error('Failed to toggle task:', error);
-    }
-  };
-
   const handleDeleteTask = async (taskId: string) => {
     if (!confirm('Bạn có chắc chắn muốn xóa task này?')) return;
-    
+
     try {
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: 'DELETE',
       });
       if (response.ok) {
-        setTasks(tasks.filter(t => t.id !== taskId));
+        setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
       }
     } catch (error) {
       console.error('Failed to delete task:', error);
@@ -93,8 +172,44 @@ export default function ProjectDetailPage() {
   };
 
   const handleTaskCreated = (newTask: Task) => {
-    setTasks([newTask, ...tasks]);
+    setTasks((currentTasks) => [newTask, ...currentTasks]);
     setIsDialogOpen(false);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const draggedTaskId = String(active.id);
+    const targetStatus = String(over.id) as TaskStatus;
+    if (!TASK_STATUSES.includes(targetStatus as TaskStatus)) return;
+
+    const taskToUpdate = tasks.find((task) => task.id === draggedTaskId);
+    if (!taskToUpdate || taskToUpdate.status === targetStatus) return;
+
+    const prevTasks = tasks;
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === draggedTaskId ? { ...task, status: targetStatus } : task
+      )
+    );
+
+    try {
+      const response = await fetch(`/api/tasks/${draggedTaskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: targetStatus }),
+      });
+
+      if (!response.ok) {
+        setTasks(prevTasks);
+      }
+    } catch (error) {
+      console.error('Failed to update task status:', error);
+      setTasks(prevTasks);
+    }
   };
 
   useEffect(() => {
@@ -134,11 +249,7 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <Button 
-            variant="outline" 
-            onClick={() => router.push('/')}
-            className="mb-4"
-          >
+          <Button variant="outline" onClick={() => router.push('/')} className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Quay lại
           </Button>
@@ -150,54 +261,25 @@ export default function ProjectDetailPage() {
         </div>
 
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold text-gray-900">
-            Tasks ({tasks.length})
-          </h2>
+          <h2 className="text-2xl font-semibold text-gray-900">Board</h2>
           <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="mr-2 h-5 w-5" />
             Thêm task mới
           </Button>
         </div>
 
-        {tasks.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600 text-lg">Chưa có task nào. Hãy thêm task mới!</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {tasks.map((task) => (
-              <Card key={task.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-1">
-                      <button
-                        onClick={() => handleToggleTask(task.id, task.done)}
-                        className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                          task.done 
-                            ? 'bg-green-500 border-green-500 text-white' 
-                            : 'border-gray-300 hover:border-green-500'
-                        }`}
-                      >
-                        {task.done && <Check className="h-4 w-4" />}
-                      </button>
-                      <span className={`flex-1 ${task.done ? 'line-through text-gray-400' : 'text-gray-900'}`}>
-                        {task.title}
-                      </span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteTask(task.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            {TASK_STATUSES.map((status) => (
+              <TaskColumn
+                key={status}
+                status={status}
+                tasks={tasks.filter((task) => task.status === status)}
+                onDelete={handleDeleteTask}
+              />
             ))}
           </div>
-        )}
+        </DndContext>
 
         <CreateTaskDialog
           open={isDialogOpen}

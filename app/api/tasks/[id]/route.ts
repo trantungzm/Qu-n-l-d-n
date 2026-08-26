@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { legacyDoneToStatus, normalizeTaskStatus } from '@/lib/task-status';
 
 export async function PATCH(
   request: Request,
@@ -7,11 +8,16 @@ export async function PATCH(
 ) {
   try {
     const body = await request.json();
-    const { done } = body;
+    const { status, done } = body;
+    const nextStatus = status
+      ? normalizeTaskStatus(status)
+      : done !== undefined
+        ? legacyDoneToStatus(Boolean(done))
+        : 'todo';
 
     const task = await prisma.task.update({
       where: { id: params.id },
-      data: { done },
+      data: { status: nextStatus },
     });
 
     return NextResponse.json(task);
