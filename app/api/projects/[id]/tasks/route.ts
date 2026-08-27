@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { normalizeTaskStatus } from '@/lib/task-status';
 
 export async function GET(
   request: Request,
@@ -26,9 +27,9 @@ export async function POST(
 ) {
   try {
     const body = await request.json();
-    const { title } = body;
+    const { title, status } = body;
 
-    if (!title) {
+    if (!title || typeof title !== 'string' || !title.trim()) {
       return NextResponse.json(
         { error: 'Title is required' },
         { status: 400 }
@@ -37,8 +38,9 @@ export async function POST(
 
     const task = await prisma.task.create({
       data: {
-        title,
+        title: title.trim(),
         projectId: params.id,
+        status: normalizeTaskStatus(status),
       },
     });
 

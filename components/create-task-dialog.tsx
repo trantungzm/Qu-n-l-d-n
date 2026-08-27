@@ -31,7 +31,7 @@ export function CreateTaskDialog({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({ title, status: 'todo' }),
       });
 
       if (response.ok) {

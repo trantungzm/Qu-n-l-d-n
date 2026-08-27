@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { legacyDoneToStatus, TASK_STATUSES } from '@/lib/task-status';
 
 // Mock Prisma client
 jest.mock('@/lib/prisma', () => ({
@@ -22,7 +23,7 @@ describe('Task API Routes', () => {
       const mockTask = {
         id: 'task-1',
         title: 'Test Task',
-        done: false,
+        status: 'todo',
         projectId: 'project-1',
         createdAt: new Date(),
       };
@@ -33,6 +34,7 @@ describe('Task API Routes', () => {
         data: {
           title: 'Test Task',
           projectId: 'project-1',
+          status: 'todo',
         },
       });
 
@@ -40,6 +42,7 @@ describe('Task API Routes', () => {
         data: {
           title: 'Test Task',
           projectId: 'project-1',
+          status: 'todo',
         },
       });
       expect(newTask).toEqual(mockTask);
@@ -49,7 +52,7 @@ describe('Task API Routes', () => {
       const mockTask = {
         id: 'task-1',
         title: '',
-        done: false,
+        status: 'todo',
         projectId: 'project-1',
         createdAt: new Date(),
       };
@@ -60,19 +63,21 @@ describe('Task API Routes', () => {
         data: {
           title: '',
           projectId: 'project-1',
+          status: 'todo',
         },
       });
 
       expect(prisma.task.create).toHaveBeenCalled();
+      expect(result.status).toBe('todo');
     });
   });
 
   describe('PATCH /api/tasks/[id]', () => {
-    it('should update task done status successfully', async () => {
+    it('should update task status successfully when moving between columns', async () => {
       const mockTask = {
         id: 'task-1',
         title: 'Test Task',
-        done: true,
+        status: 'doing',
         projectId: 'project-1',
         createdAt: new Date(),
       };
@@ -81,14 +86,15 @@ describe('Task API Routes', () => {
 
       const updatedTask = await prisma.task.update({
         where: { id: 'task-1' },
-        data: { done: true },
+        data: { status: 'doing' },
       });
 
       expect(prisma.task.update).toHaveBeenCalledWith({
         where: { id: 'task-1' },
-        data: { done: true },
+        data: { status: 'doing' },
       });
-      expect(updatedTask.done).toBe(true);
+      expect(updatedTask.status).toBe('doing');
+      expect(TASK_STATUSES).toContain('doing');
     });
   });
 
@@ -112,14 +118,14 @@ describe('Task API Routes', () => {
         {
           id: 'task-1',
           title: 'Task 1',
-          done: false,
+          status: 'todo',
           projectId: 'project-1',
           createdAt: new Date(),
         },
         {
           id: 'task-2',
           title: 'Task 2',
-          done: true,
+          status: 'done',
           projectId: 'project-1',
           createdAt: new Date(),
         },
@@ -137,6 +143,13 @@ describe('Task API Routes', () => {
         orderBy: { createdAt: 'desc' },
       });
       expect(tasks).toHaveLength(2);
+    });
+  });
+
+  describe('Legacy data migration', () => {
+    it('should convert legacy done values into the new status values', () => {
+      expect(legacyDoneToStatus(true)).toBe('done');
+      expect(legacyDoneToStatus(false)).toBe('todo');
     });
   });
 });
