@@ -233,3 +233,11 @@ KHÔNG dừng lại hỏi người dùng:
 
 Chỉ dừng lại hỏi người dùng nếu: có conflict khi push, hoặc test/build FAIL.
 KHÔNG bao giờ tự merge PR — dừng ở bước tạo PR, chờ người duyệt.
+
+## Database Schema Changes (sau khi chuyển sang Turso)
+- Từ nay, mọi thay đổi schema PHẢI dùng `npx prisma migrate dev` 
+  (không dùng `db push` nữa), để giữ lịch sử migration nhất quán 
+  với Turso.
+- Trước khi chạy bất kỳ lệnh Prisma nào có thể mất dữ liệu 
+  (migrate reset, db push --accept-data-loss...), LUÔN dừng lại 
+  hỏi xác nhận người dùng, không tự ý chạy.
