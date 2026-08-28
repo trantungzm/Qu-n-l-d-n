@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, ArrowRight } from 'lucide-react';
@@ -73,10 +74,15 @@ export default function Home() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900">Quản lý dự án cá nhân</h1>
-          <Button onClick={() => setIsDialogOpen(true)} size="lg">
-            <Plus className="mr-2 h-5 w-5" />
-            Tạo dự án mới
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => setIsDialogOpen(true)} size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              Tạo dự án mới
+            </Button>
+            <Button variant="outline" onClick={() => signOut({ callbackUrl: '/login' })}>
+              Đăng xuất
+            </Button>
+          </div>
         </div>
 
         {loading ? (
