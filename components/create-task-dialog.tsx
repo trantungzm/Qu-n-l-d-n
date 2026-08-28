@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Alert } from '@/components/ui/alert';
+import { Loader2 } from 'lucide-react';
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -19,12 +21,14 @@ export function CreateTaskDialog({
 }: CreateTaskDialogProps) {
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
     setLoading(true);
+    setError(false);
     try {
       const response = await fetch(`/api/projects/${projectId}/tasks`, {
         method: 'POST',
@@ -38,9 +42,12 @@ export function CreateTaskDialog({
         const newTask = await response.json();
         onTaskCreated(newTask);
         setTitle('');
+      } else {
+        setError(true);
       }
     } catch (error) {
       console.error('Failed to create task:', error);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -63,6 +70,7 @@ export function CreateTaskDialog({
             Nhập tiêu đề để thêm task mới vào dự án
           </p>
         </div>
+        {error && <Alert className="mb-4">Không tạo được task, thử lại</Alert>}
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -88,6 +96,7 @@ export function CreateTaskDialog({
               Hủy
             </Button>
             <Button type="submit" disabled={loading || !title.trim()}>
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? 'Đang thêm...' : 'Thêm task'}
             </Button>
           </div>

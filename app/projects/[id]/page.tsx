@@ -17,6 +17,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { CreateTaskDialog } from '@/components/create-task-dialog';
 import { TASK_STATUSES, type TaskStatus } from '@/lib/task-status';
+import { Alert } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Task {
   id: string;
@@ -128,6 +130,8 @@ export default function ProjectDetailPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [statusUpdateError, setStatusUpdateError] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -135,22 +139,28 @@ export default function ProjectDetailPage() {
     try {
       const response = await fetch('/api/projects');
       const data = await response.json();
+      if (!response.ok) throw new Error('Failed to load project');
       if (Array.isArray(data)) {
         const foundProject = data.find((p: Project) => p.id === projectId);
         setProject(foundProject || null);
       }
     } catch (error) {
       console.error('Failed to fetch project:', error);
+      setError(true);
     }
   };
 
   const fetchTasks = async () => {
+    setLoading(true);
+    setError(false);
     try {
       const response = await fetch(`/api/projects/${projectId}/tasks`);
       const data = await response.json();
+      if (!response.ok) throw new Error('Failed to load tasks');
       setTasks(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch tasks:', error);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -195,6 +205,7 @@ export default function ProjectDetailPage() {
     );
 
     try {
+      setStatusUpdateError(false);
       const response = await fetch(`/api/tasks/${draggedTaskId}`, {
         method: 'PATCH',
         headers: {
@@ -205,10 +216,12 @@ export default function ProjectDetailPage() {
 
       if (!response.ok) {
         setTasks(prevTasks);
+        setStatusUpdateError(true);
       }
     } catch (error) {
       console.error('Failed to update task status:', error);
       setTasks(prevTasks);
+      setStatusUpdateError(true);
     }
   };
 
@@ -221,9 +234,38 @@ export default function ProjectDetailPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center py-12">
-            <p className="text-gray-600">Đang tải...</p>
+          <Skeleton className="mb-4 h-9 w-24" />
+          <Skeleton className="mb-3 h-10 w-2/3" />
+          <Skeleton className="mb-8 h-5 w-1/2" />
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3" aria-label="Đang tải task">
+            {TASK_STATUSES.map((status) => (
+              <div key={status} className="min-h-[420px] rounded-xl border-2 border-gray-200 bg-white p-4">
+                <div className="mb-6 flex justify-between">
+                  <Skeleton className="h-6 w-24" />
+                  <Skeleton className="h-6 w-8 rounded-full" />
+                </div>
+                <div className="space-y-3">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              </div>
+            ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="container mx-auto px-4 py-8">
+          <Alert>
+            <p className="font-medium">Không tải được dữ liệu, thử lại</p>
+            <Button variant="outline" className="mt-3" onClick={() => { setError(false); fetchProject(); fetchTasks(); }}>
+              Thử lại
+            </Button>
+          </Alert>
         </div>
       </div>
     );
@@ -267,6 +309,15 @@ export default function ProjectDetailPage() {
             Thêm task mới
           </Button>
         </div>
+
+        {statusUpdateError && (
+          <Alert className="mb-6">
+            <p className="font-medium">Không lưu được trạng thái task, task đã được khôi phục</p>
+            <Button variant="outline" className="mt-3" onClick={() => setStatusUpdateError(false)}>
+              Đã hiểu
+            </Button>
+          </Alert>
+        )}
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">

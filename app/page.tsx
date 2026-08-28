@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, ArrowRight } from 'lucide-react';
 import { CreateProjectDialog } from '@/components/create-project-dialog';
+import { Alert } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Project {
   id: string;
@@ -19,21 +21,24 @@ export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const fetchProjects = async () => {
+    setLoading(true);
+    setError(false);
     try {
       const response = await fetch('/api/projects');
       const data = await response.json();
       
       if (!response.ok) {
         console.error('API Error:', data);
-        setProjects([]);
+        throw new Error('Failed to load projects');
       } else {
         setProjects(Array.isArray(data) ? data : []);
       }
     } catch (error) {
       console.error('Failed to fetch projects:', error);
-      setProjects([]);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -75,9 +80,27 @@ export default function Home() {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600">Đang tải...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" aria-label="Đang tải dự án">
+            {[1, 2, 3].map((item) => (
+              <Card key={item}>
+                <CardHeader className="space-y-3">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-1/3" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-9 w-full" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
+        ) : error ? (
+          <Alert>
+            <p className="font-medium">Không tải được dữ liệu, thử lại</p>
+            <Button variant="outline" className="mt-3" onClick={fetchProjects}>
+              Thử lại
+            </Button>
+          </Alert>
         ) : projects.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-600 text-lg">Chưa có dự án nào. Hãy tạo dự án mới!</p>

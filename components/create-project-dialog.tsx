@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Alert } from '@/components/ui/alert';
+import { Loader2 } from 'lucide-react';
 
 interface CreateProjectDialogProps {
   open: boolean;
@@ -18,12 +20,14 @@ export function CreateProjectDialog({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
     setLoading(true);
+    setError(false);
     try {
       const response = await fetch('/api/projects', {
         method: 'POST',
@@ -38,9 +42,12 @@ export function CreateProjectDialog({
         onProjectCreated(newProject);
         setName('');
         setDescription('');
+      } else {
+        setError(true);
       }
     } catch (error) {
       console.error('Failed to create project:', error);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -63,6 +70,7 @@ export function CreateProjectDialog({
             Nhập thông tin để tạo dự án mới của bạn
           </p>
         </div>
+        {error && <Alert className="mb-4">Không tạo được dự án, thử lại</Alert>}
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -99,6 +107,7 @@ export function CreateProjectDialog({
               Hủy
             </Button>
             <Button type="submit" disabled={loading || !name.trim()}>
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? 'Đang tạo...' : 'Tạo dự án'}
             </Button>
           </div>
