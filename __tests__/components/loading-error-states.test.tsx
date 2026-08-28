@@ -12,6 +12,10 @@ jest.mock('next/navigation', () => ({
   useParams: () => ({ id: 'project-1' }),
 }));
 
+jest.mock('next-auth/react', () => ({
+  signOut: jest.fn(),
+}));
+
 jest.mock('@dnd-kit/core', () => ({
   DndContext: ({ children, onDragEnd }: { children: React.ReactNode; onDragEnd: typeof dragEndHandler }) => {
     dragEndHandler = onDragEnd;
