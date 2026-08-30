@@ -22,11 +22,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Search, X } from 'lucide-react';
 import { filterTasksByTitle } from '@/lib/task-filter';
+import { formatTaskDueDate, isTaskOverdue } from '@/lib/task-due-date';
 
 interface Task {
   id: string;
   title: string;
   status: TaskStatus;
+  dueDate?: string | null;
   projectId: string;
   createdAt: string;
 }
@@ -61,6 +63,8 @@ function TaskCard({ task, onDelete }: { task: Task; onDelete: (taskId: string) =
       }
     : undefined;
 
+  const overdue = isTaskOverdue(task.dueDate, task.status);
+
   return (
     <Card
       ref={setNodeRef}
@@ -81,6 +85,12 @@ function TaskCard({ task, onDelete }: { task: Task; onDelete: (taskId: string) =
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
+
+        {task.dueDate && (
+          <div className={`mt-2 text-xs font-medium ${overdue ? 'text-red-600' : 'text-gray-600'}`}>
+            Hạn: {formatTaskDueDate(task.dueDate)}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

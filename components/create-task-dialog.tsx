@@ -20,6 +20,7 @@ export function CreateTaskDialog({
   projectId,
 }: CreateTaskDialogProps) {
   const [title, setTitle] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
@@ -35,13 +36,14 @@ export function CreateTaskDialog({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title, status: 'todo' }),
+        body: JSON.stringify({ title, status: 'todo', dueDate: dueDate || null }),
       });
 
       if (response.ok) {
         const newTask = await response.json();
         onTaskCreated(newTask);
         setTitle('');
+        setDueDate('');
       } else {
         setError(true);
       }
@@ -83,6 +85,18 @@ export function CreateTaskDialog({
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Nhập tiêu đề task"
                 required
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <label htmlFor="dueDate" className="text-sm font-medium">
+                Hạn hoàn thành
+              </label>
+              <Input
+                id="dueDate"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
           </div>
