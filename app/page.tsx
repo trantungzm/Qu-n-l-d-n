@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, ArrowRight } from 'lucide-react';
-import { CreateProjectDialog } from '@/components/create-project-dialog';
+import { Plus, Trash2, ArrowRight, Pencil } from 'lucide-react';
+import { CreateProjectDialog, EditProjectDialog } from '@/components/create-project-dialog';
 import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -21,6 +21,8 @@ export default function Home() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -61,8 +63,23 @@ export default function Home() {
   };
 
   const handleProjectCreated = (newProject: Project) => {
-    setProjects([newProject, ...projects]);
+    setProjects((currentProjects) => [newProject, ...currentProjects]);
     setIsDialogOpen(false);
+  };
+
+  const handleProjectUpdated = (updatedProject: Project) => {
+    setProjects((currentProjects) =>
+      currentProjects.map((project) =>
+        project.id === updatedProject.id ? updatedProject : project
+      )
+    );
+    setIsEditDialogOpen(false);
+    setEditingProject(null);
+  };
+
+  const handleEditProject = (project: Project) => {
+    setEditingProject(project);
+    setIsEditDialogOpen(true);
   };
 
   useEffect(() => {
@@ -136,6 +153,15 @@ export default function Home() {
                       Xem chi tiết
                     </Button>
                     <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleEditProject(project)}
+                      className="flex-1"
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Sửa
+                    </Button>
+                    <Button
                       variant="destructive"
                       size="sm"
                       onClick={() => handleDelete(project.id)}
@@ -156,6 +182,16 @@ export default function Home() {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onProjectCreated={handleProjectCreated}
+      />
+
+      <EditProjectDialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) setEditingProject(null);
+        }}
+        project={editingProject}
+        onProjectUpdated={handleProjectUpdated}
       />
     </div>
   );

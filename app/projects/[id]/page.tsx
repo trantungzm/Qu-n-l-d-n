@@ -19,6 +19,9 @@ import { CreateTaskDialog } from '@/components/create-task-dialog';
 import { TASK_STATUSES, type TaskStatus } from '@/lib/task-status';
 import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Search, X } from 'lucide-react';
+import { filterTasksByTitle } from '@/lib/task-filter';
 
 interface Task {
   id: string;
@@ -87,10 +90,12 @@ function TaskColumn({
   status,
   tasks,
   onDelete,
+  isFiltering,
 }: {
   status: TaskStatus;
   tasks: Task[];
   onDelete: (taskId: string) => void;
+  isFiltering: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
@@ -111,7 +116,7 @@ function TaskColumn({
       <div className="space-y-3">
         {tasks.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-300 bg-white/50 p-4 text-center text-sm text-gray-500">
-            Chưa có task nào
+            {isFiltering ? 'Không tìm thấy công việc phù hợp' : 'Chưa có công việc'}
           </div>
         ) : (
           tasks.map((task) => <TaskCard key={task.id} task={task} onDelete={onDelete} />)
@@ -132,8 +137,10 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [statusUpdateError, setStatusUpdateError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const filteredTasks = filterTasksByTitle(tasks, searchQuery);
 
   const fetchProject = async () => {
     try {
@@ -310,6 +317,29 @@ export default function ProjectDetailPage() {
           </Button>
         </div>
 
+        <div className="relative mb-6 max-w-xl">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Tìm công việc theo tiêu đề"
+            aria-label="Tìm công việc"
+            className="pl-9 pr-10"
+          />
+          {searchQuery && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Xóa tìm kiếm"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+
         {statusUpdateError && (
           <Alert className="mb-6">
             <p className="font-medium">Không lưu được trạng thái task, task đã được khôi phục</p>
@@ -325,8 +355,9 @@ export default function ProjectDetailPage() {
               <TaskColumn
                 key={status}
                 status={status}
-                tasks={tasks.filter((task) => task.status === status)}
+                tasks={filteredTasks.filter((task) => task.status === status)}
                 onDelete={handleDeleteTask}
+                isFiltering={Boolean(searchQuery.trim())}
               />
             ))}
           </div>
