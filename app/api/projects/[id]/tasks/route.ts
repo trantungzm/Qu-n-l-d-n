@@ -27,7 +27,7 @@ export async function POST(
 ) {
   try {
     const body = await request.json();
-    const { title, status } = body;
+    const { title, status, dueDate } = body;
 
     if (!title || typeof title !== 'string' || !title.trim()) {
       return NextResponse.json(
@@ -36,11 +36,24 @@ export async function POST(
       );
     }
 
+    let parsedDueDate: Date | null = null;
+    if (typeof dueDate === 'string' && dueDate.trim()) {
+      const candidate = new Date(dueDate);
+      if (Number.isNaN(candidate.getTime())) {
+        return NextResponse.json(
+          { error: 'Invalid due date' },
+          { status: 400 }
+        );
+      }
+      parsedDueDate = candidate;
+    }
+
     const task = await prisma.task.create({
       data: {
         title: title.trim(),
         projectId: params.id,
         status: normalizeTaskStatus(status),
+        dueDate: parsedDueDate,
       },
     });
 

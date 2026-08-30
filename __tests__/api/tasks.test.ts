@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { PATCH } from '@/app/api/projects/[id]/route';
 import { legacyDoneToStatus, TASK_STATUSES } from '@/lib/task-status';
+import { isTaskOverdue } from '@/lib/task-due-date';
 
 // Mock Prisma client
 jest.mock('@/lib/prisma', () => ({
@@ -200,6 +201,19 @@ describe('Task API Routes', () => {
         orderBy: { createdAt: 'desc' },
       });
       expect(tasks).toHaveLength(2);
+    });
+  });
+
+  describe('Due date checks', () => {
+    it('should mark a task as overdue only when due date is before today and not done', () => {
+      const today = new Date();
+      const future = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+      const past = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+
+      expect(isTaskOverdue(future.toISOString(), 'todo')).toBe(false);
+      expect(isTaskOverdue(past.toISOString(), 'todo')).toBe(true);
+      expect(isTaskOverdue(null, 'todo')).toBe(false);
+      expect(isTaskOverdue(past.toISOString(), 'done')).toBe(false);
     });
   });
 
