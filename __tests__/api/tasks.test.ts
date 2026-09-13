@@ -105,6 +105,30 @@ describe('Task API Routes', () => {
       expect(newTask).toEqual(mockTask);
     });
 
+    it('should create a task with an optional due date', async () => {
+      const mockTask = {
+        id: 'task-1',
+        title: 'Test Task',
+        status: 'todo',
+        dueDate: '2026-09-25T00:00:00.000Z',
+        projectId: 'project-1',
+        createdAt: new Date(),
+      };
+
+      (prisma.task.create as jest.Mock).mockResolvedValue(mockTask);
+
+      const newTask = await prisma.task.create({
+        data: {
+          title: 'Test Task',
+          projectId: 'project-1',
+          status: 'todo',
+          dueDate: '2026-09-25T00:00:00.000Z',
+        },
+      });
+
+      expect(newTask.dueDate).toBe('2026-09-25T00:00:00.000Z');
+    });
+
     it('should fail when title is missing', async () => {
       const mockTask = {
         id: 'task-1',
