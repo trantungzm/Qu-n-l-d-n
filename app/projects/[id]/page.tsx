@@ -32,6 +32,7 @@ import {
   PRIORITY_LABELS,
   TASK_PRIORITIES,
 } from '@/lib/task-priority';
+import { TaskDetailDialog, type SubTask } from '@/components/task-detail-dialog';
 
 interface Task {
   id: string;
@@ -41,6 +42,7 @@ interface Task {
   createdAt: string;
   dueDate?: string | null;
   priority: string;
+  subTasks: SubTask[];
 }
 
 interface Project {
@@ -66,10 +68,12 @@ function TaskCard({
   task,
   onDelete,
   onEdit,
+  onOpenDetail,
 }: {
   task: Task;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  onOpenDetail: (task: Task) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: task.id,
@@ -81,21 +85,33 @@ function TaskCard({
       }
     : undefined;
 
+  const subTaskCount = task.subTasks?.length ?? 0;
+  const subTaskDoneCount = task.subTasks?.filter((item) => item.done).length ?? 0;
+
   return (
     <Card
       ref={setNodeRef}
       style={style}
       {...listeners}
       {...attributes}
+      onClick={() => onOpenDetail(task)}
       className="cursor-grab active:cursor-grabbing overflow-hidden border border-gray-200 bg-white shadow-sm"
     >
       <CardContent className="p-3">
         <div className="flex items-start justify-between gap-2">
           <p className="flex-1 text-sm font-medium text-gray-800">{task.title}</p>
+          {subTaskCount > 0 && (
+            <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+              {subTaskDoneCount}/{subTaskCount}
+            </span>
+          )}
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onEdit(task)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(task);
+            }}
             className="h-8 w-8 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-100"
           >
             <Pencil className="h-4 w-4" />
@@ -103,7 +119,10 @@ function TaskCard({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onDelete(task.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(task.id);
+            }}
             className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
           >
             <Trash2 className="h-4 w-4" />
@@ -137,12 +156,14 @@ function TaskColumn({
   tasks,
   onDelete,
   onEdit,
+  onOpenDetail,
   isFiltering,
 }: {
   status: TaskStatus;
   tasks: Task[];
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  onOpenDetail: (task: Task) => void;
   isFiltering: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
@@ -168,7 +189,13 @@ function TaskColumn({
           </div>
         ) : (
           tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onDelete={onDelete} onEdit={onEdit} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onOpenDetail={onOpenDetail}
+            />
           ))
         )}
       </div>
@@ -185,6 +212,7 @@ export default function ProjectDetailPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [statusUpdateError, setStatusUpdateError] = useState(false);
@@ -241,15 +269,23 @@ export default function ProjectDetailPage() {
   };
 
   const handleTaskCreated = (newTask: Task) => {
-    setTasks((currentTasks) => [newTask, ...currentTasks]);
+    setTasks((currentTasks) => [{ ...newTask, subTasks: newTask.subTasks ?? [] }, ...currentTasks]);
     setIsDialogOpen(false);
   };
 
   const handleTaskUpdated = (updatedTask: Task) => {
     setTasks((currentTasks) =>
-      currentTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+      currentTasks.map((task) =>
+        task.id === updatedTask.id ? { ...task, ...updatedTask, subTasks: task.subTasks } : task
+      )
     );
     setEditingTask(null);
+  };
+
+  const handleSubTasksChanged = (taskId: string, subTasks: SubTask[]) => {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) => (task.id === taskId ? { ...task, subTasks } : task))
+    );
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -433,6 +469,7 @@ export default function ProjectDetailPage() {
                 tasks={filteredTasks.filter((task) => task.status === status)}
                 onDelete={handleDeleteTask}
                 onEdit={setEditingTask}
+                onOpenDetail={setViewingTask}
                 isFiltering={Boolean(searchQuery.trim()) || priorityFilter !== 'all'}
               />
             ))}
@@ -453,6 +490,15 @@ export default function ProjectDetailPage() {
           }}
           onTaskUpdated={handleTaskUpdated}
           task={editingTask}
+        />
+
+        <TaskDetailDialog
+          open={viewingTask !== null}
+          onOpenChange={(open) => {
+            if (!open) setViewingTask(null);
+          }}
+          task={viewingTask}
+          onSubTasksChanged={handleSubTasksChanged}
         />
       </div>
     </div>
