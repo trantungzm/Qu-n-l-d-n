@@ -241,3 +241,14 @@ KHÔNG bao giờ tự merge PR — dừng ở bước tạo PR, chờ người d
 - Trước khi chạy bất kỳ lệnh Prisma nào có thể mất dữ liệu 
   (migrate reset, db push --accept-data-loss...), LUÔN dừng lại 
   hỏi xác nhận người dùng, không tự ý chạy.
+  ## Turso Schema Sync (quan trọng)
+- Turso KHÔNG dùng `prisma migrate deploy` được (lỗi P1013, không hiểu 
+  scheme libsql://). Prisma Migration Engine chỉ hoạt động qua file: 
+  hoặc chuẩn SQL connection string.
+- Quy trình đúng: (1) chạy `prisma migrate dev` LOCAL để tạo file 
+  migration .sql, (2) đọc đúng câu SQL ALTER TABLE trong file đó, 
+  (3) áp dụng SQL đó lên Turso qua script tạm dùng @libsql/client 
+  hoặc qua Turso dashboard "Edit Data" > SQL tab, (4) xoá script tạm 
+  sau khi dùng xong.
+- LUÔN xác nhận với người dùng trước khi chạy SQL ảnh hưởng Turso 
+  nếu đã có dữ liệu thật.
