@@ -21,9 +21,17 @@ import { TASK_STATUSES, type TaskStatus } from '@/lib/task-status';
 import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Search, X } from 'lucide-react';
 import { filterTasksByTitle } from '@/lib/task-filter';
 import { isTaskOverdue, formatDueDate } from '@/lib/task-due-date';
+import {
+  filterTasksByPriority,
+  normalizeTaskPriority,
+  PRIORITY_BADGE_CLASSES,
+  PRIORITY_LABELS,
+  TASK_PRIORITIES,
+} from '@/lib/task-priority';
 
 interface Task {
   id: string;
@@ -32,6 +40,7 @@ interface Task {
   projectId: string;
   createdAt: string;
   dueDate?: string | null;
+  priority: string;
 }
 
 interface Project {
@@ -100,6 +109,14 @@ function TaskCard({
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
+
+        <span
+          className={`mt-2 inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${
+            PRIORITY_BADGE_CLASSES[normalizeTaskPriority(task.priority)]
+          }`}
+        >
+          {PRIORITY_LABELS[normalizeTaskPriority(task.priority)]}
+        </span>
 
         {task.dueDate && (
           <p
@@ -172,9 +189,10 @@ export default function ProjectDetailPage() {
   const [error, setError] = useState(false);
   const [statusUpdateError, setStatusUpdateError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('all');
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
-  const filteredTasks = filterTasksByTitle(tasks, searchQuery);
+  const filteredTasks = filterTasksByPriority(filterTasksByTitle(tasks, searchQuery), priorityFilter);
 
   const fetchProject = async () => {
     try {
@@ -358,27 +376,43 @@ export default function ProjectDetailPage() {
           </Button>
         </div>
 
-        <div className="relative mb-6 max-w-xl">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Tìm công việc theo tiêu đề"
-            aria-label="Tìm công việc"
-            className="pl-9 pr-10"
-          />
-          {searchQuery && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Xóa tìm kiếm"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative max-w-xl flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Tìm công việc theo tiêu đề"
+              aria-label="Tìm công việc"
+              className="pl-9 pr-10"
+            />
+            {searchQuery && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Xóa tìm kiếm"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          <Select
+            value={priorityFilter}
+            onChange={(event) => setPriorityFilter(event.target.value)}
+            aria-label="Lọc theo mức độ ưu tiên"
+            className="sm:w-48"
+          >
+            <option value="all">Tất cả mức ưu tiên</option>
+            {TASK_PRIORITIES.map((value) => (
+              <option key={value} value={value}>
+                {PRIORITY_LABELS[value]}
+              </option>
+            ))}
+          </Select>
         </div>
 
         {statusUpdateError && (
@@ -399,7 +433,7 @@ export default function ProjectDetailPage() {
                 tasks={filteredTasks.filter((task) => task.status === status)}
                 onDelete={handleDeleteTask}
                 onEdit={setEditingTask}
-                isFiltering={Boolean(searchQuery.trim())}
+                isFiltering={Boolean(searchQuery.trim()) || priorityFilter !== 'all'}
               />
             ))}
           </div>

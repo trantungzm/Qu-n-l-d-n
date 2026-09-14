@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Alert } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import { PRIORITY_LABELS, TASK_PRIORITIES, type TaskPriority } from '@/lib/task-priority';
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -21,6 +23,7 @@ export function CreateTaskDialog({
 }: CreateTaskDialogProps) {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [priority, setPriority] = useState<TaskPriority>('medium');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
@@ -36,7 +39,7 @@ export function CreateTaskDialog({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title, status: 'todo', dueDate: dueDate || null }),
+        body: JSON.stringify({ title, status: 'todo', dueDate: dueDate || null, priority }),
       });
 
       if (response.ok) {
@@ -44,6 +47,7 @@ export function CreateTaskDialog({
         onTaskCreated(newTask);
         setTitle('');
         setDueDate('');
+        setPriority('medium');
       } else {
         setError(true);
       }
@@ -97,6 +101,22 @@ export function CreateTaskDialog({
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
               />
+            </div>
+            <div className="grid gap-2">
+              <label htmlFor="priority" className="text-sm font-medium">
+                Mức độ ưu tiên
+              </label>
+              <Select
+                id="priority"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as TaskPriority)}
+              >
+                {TASK_PRIORITIES.map((value) => (
+                  <option key={value} value={value}>
+                    {PRIORITY_LABELS[value]}
+                  </option>
+                ))}
+              </Select>
             </div>
           </div>
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-4">

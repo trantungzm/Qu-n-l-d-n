@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { legacyDoneToStatus, normalizeTaskStatus } from '@/lib/task-status';
+import { normalizeTaskPriority } from '@/lib/task-priority';
 
 export async function PATCH(
   request: Request,
@@ -8,14 +9,23 @@ export async function PATCH(
 ) {
   try {
     const body = await request.json();
-    const { status, done, title, dueDate } = body;
+    const { status, done, title, dueDate, priority } = body;
 
-    const data: { status?: string; title?: string; dueDate?: Date | null } = {};
+    const data: {
+      status?: string;
+      title?: string;
+      dueDate?: Date | null;
+      priority?: string;
+    } = {};
 
     if (status !== undefined || done !== undefined) {
       data.status = status
         ? normalizeTaskStatus(status)
         : legacyDoneToStatus(Boolean(done));
+    }
+
+    if (priority !== undefined) {
+      data.priority = normalizeTaskPriority(priority);
     }
 
     if (title !== undefined) {
