@@ -8,16 +8,44 @@ export async function PATCH(
 ) {
   try {
     const body = await request.json();
-    const { status, done } = body;
-    const nextStatus = status
-      ? normalizeTaskStatus(status)
-      : done !== undefined
-        ? legacyDoneToStatus(Boolean(done))
-        : 'todo';
+    const { status, done, title, dueDate } = body;
+
+    const data: { status?: string; title?: string; dueDate?: Date | null } = {};
+
+    if (status !== undefined || done !== undefined) {
+      data.status = status
+        ? normalizeTaskStatus(status)
+        : legacyDoneToStatus(Boolean(done));
+    }
+
+    if (title !== undefined) {
+      if (typeof title !== 'string' || !title.trim()) {
+        return NextResponse.json(
+          { error: 'Title is required' },
+          { status: 400 }
+        );
+      }
+      data.title = title.trim();
+    }
+
+    if (dueDate !== undefined) {
+      if (dueDate === null || dueDate === '') {
+        data.dueDate = null;
+      } else {
+        const candidate = new Date(dueDate);
+        if (Number.isNaN(candidate.getTime())) {
+          return NextResponse.json(
+            { error: 'Invalid due date' },
+            { status: 400 }
+          );
+        }
+        data.dueDate = candidate;
+      }
+    }
 
     const task = await prisma.task.update({
       where: { id: params.id },
-      data: { status: nextStatus },
+      data,
     });
 
     return NextResponse.json(task);
