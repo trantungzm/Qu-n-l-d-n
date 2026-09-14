@@ -14,8 +14,9 @@ import {
 } from '@dnd-kit/core';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Pencil } from 'lucide-react';
 import { CreateTaskDialog } from '@/components/create-task-dialog';
+import { EditTaskDialog } from '@/components/edit-task-dialog';
 import { TASK_STATUSES, type TaskStatus } from '@/lib/task-status';
 import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -52,7 +53,15 @@ const columnStyles: Record<TaskStatus, string> = {
   done: 'border-emerald-200 bg-emerald-50',
 };
 
-function TaskCard({ task, onDelete }: { task: Task; onDelete: (taskId: string) => void }) {
+function TaskCard({
+  task,
+  onDelete,
+  onEdit,
+}: {
+  task: Task;
+  onDelete: (taskId: string) => void;
+  onEdit: (task: Task) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: task.id,
   });
@@ -74,6 +83,14 @@ function TaskCard({ task, onDelete }: { task: Task; onDelete: (taskId: string) =
       <CardContent className="p-3">
         <div className="flex items-start justify-between gap-2">
           <p className="flex-1 text-sm font-medium text-gray-800">{task.title}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit(task)}
+            className="h-8 w-8 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-100"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -102,11 +119,13 @@ function TaskColumn({
   status,
   tasks,
   onDelete,
+  onEdit,
   isFiltering,
 }: {
   status: TaskStatus;
   tasks: Task[];
   onDelete: (taskId: string) => void;
+  onEdit: (task: Task) => void;
   isFiltering: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
@@ -131,7 +150,9 @@ function TaskColumn({
             {isFiltering ? 'Không tìm thấy công việc phù hợp' : 'Chưa có công việc'}
           </div>
         ) : (
-          tasks.map((task) => <TaskCard key={task.id} task={task} onDelete={onDelete} />)
+          tasks.map((task) => (
+            <TaskCard key={task.id} task={task} onDelete={onDelete} onEdit={onEdit} />
+          ))
         )}
       </div>
     </div>
@@ -146,6 +167,7 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [statusUpdateError, setStatusUpdateError] = useState(false);
@@ -203,6 +225,13 @@ export default function ProjectDetailPage() {
   const handleTaskCreated = (newTask: Task) => {
     setTasks((currentTasks) => [newTask, ...currentTasks]);
     setIsDialogOpen(false);
+  };
+
+  const handleTaskUpdated = (updatedTask: Task) => {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+    );
+    setEditingTask(null);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -369,6 +398,7 @@ export default function ProjectDetailPage() {
                 status={status}
                 tasks={filteredTasks.filter((task) => task.status === status)}
                 onDelete={handleDeleteTask}
+                onEdit={setEditingTask}
                 isFiltering={Boolean(searchQuery.trim())}
               />
             ))}
@@ -380,6 +410,15 @@ export default function ProjectDetailPage() {
           onOpenChange={setIsDialogOpen}
           onTaskCreated={handleTaskCreated}
           projectId={projectId}
+        />
+
+        <EditTaskDialog
+          open={editingTask !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditingTask(null);
+          }}
+          onTaskUpdated={handleTaskUpdated}
+          task={editingTask}
         />
       </div>
     </div>
