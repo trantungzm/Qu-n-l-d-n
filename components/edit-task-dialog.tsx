@@ -3,13 +3,21 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Alert } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import {
+  normalizeTaskPriority,
+  PRIORITY_LABELS,
+  TASK_PRIORITIES,
+  type TaskPriority,
+} from '@/lib/task-priority';
 
 interface Task {
   id: string;
   title: string;
   dueDate?: string | null;
+  priority?: string;
 }
 
 interface EditTaskDialogProps {
@@ -34,6 +42,7 @@ export function EditTaskDialog({
 }: EditTaskDialogProps) {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [priority, setPriority] = useState<TaskPriority>('medium');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
@@ -41,6 +50,7 @@ export function EditTaskDialog({
     if (open && task) {
       setTitle(task.title);
       setDueDate(toDateInputValue(task.dueDate));
+      setPriority(normalizeTaskPriority(task.priority));
       setError(false);
     }
   }, [open, task]);
@@ -57,7 +67,7 @@ export function EditTaskDialog({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title, dueDate: dueDate || null }),
+        body: JSON.stringify({ title, dueDate: dueDate || null, priority }),
       });
 
       if (response.ok) {
@@ -88,7 +98,7 @@ export function EditTaskDialog({
             Sửa task
           </h2>
           <p className="text-sm text-gray-500">
-            Cập nhật tiêu đề và hạn hoàn thành của task
+            Cập nhật tiêu đề, hạn hoàn thành và mức độ ưu tiên của task
           </p>
         </div>
         {error && <Alert className="mb-4">Không sửa được task, thử lại</Alert>}
@@ -116,6 +126,22 @@ export function EditTaskDialog({
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
               />
+            </div>
+            <div className="grid gap-2">
+              <label htmlFor="edit-priority" className="text-sm font-medium">
+                Mức độ ưu tiên
+              </label>
+              <Select
+                id="edit-priority"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as TaskPriority)}
+              >
+                {TASK_PRIORITIES.map((value) => (
+                  <option key={value} value={value}>
+                    {PRIORITY_LABELS[value]}
+                  </option>
+                ))}
+              </Select>
             </div>
           </div>
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-4">
