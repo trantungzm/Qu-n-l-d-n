@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, ArrowRight, Pencil } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, Pencil, LayoutDashboard } from 'lucide-react';
 import { CreateProjectDialog, EditProjectDialog } from '@/components/create-project-dialog';
 import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -92,6 +92,10 @@ export default function Home() {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900">Quản lý dự án cá nhân</h1>
           <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={() => router.push('/dashboard')}>
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              Tổng quan
+            </Button>
             <Button onClick={() => setIsDialogOpen(true)} size="lg">
               <Plus className="mr-2 h-5 w-5" />
               Tạo dự án mới
