@@ -11,6 +11,7 @@ export async function GET(
     const tasks = await prisma.task.findMany({
       where: { projectId: params.id },
       orderBy: { createdAt: 'desc' },
+      include: { subTasks: { orderBy: { createdAt: 'asc' } } },
     });
     return NextResponse.json(tasks);
   } catch (error) {
