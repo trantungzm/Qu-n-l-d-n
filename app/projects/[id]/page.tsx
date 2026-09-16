@@ -6,18 +6,24 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
-  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Plus, Trash2, Pencil } from 'lucide-react';
 import { CreateTaskDialog } from '@/components/create-task-dialog';
 import { EditTaskDialog } from '@/components/edit-task-dialog';
-import { TASK_STATUSES, type TaskStatus } from '@/lib/task-status';
+import { TASK_STATUSES, isTaskStatus, type TaskStatus } from '@/lib/task-status';
+import { reorderTasksOnDrop } from '@/lib/task-order';
 import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -42,6 +48,7 @@ interface Task {
   createdAt: string;
   dueDate?: string | null;
   priority: string;
+  order: number;
   subTasks: SubTask[];
 }
 
@@ -75,15 +82,15 @@ function TaskCard({
   onEdit: (task: Task) => void;
   onOpenDetail: (task: Task) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   });
 
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-      }
-    : undefined;
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   const subTaskCount = task.subTasks?.length ?? 0;
   const subTaskDoneCount = task.subTasks?.filter((item) => item.done).length ?? 0;
@@ -167,6 +174,7 @@ function TaskColumn({
   isFiltering: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
+  const sortedTasks = [...tasks].sort((a, b) => a.order - b.order);
 
   return (
     <div
@@ -178,27 +186,29 @@ function TaskColumn({
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">{statusLabels[status]}</h3>
         <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-gray-700">
-          {tasks.length}
+          {sortedTasks.length}
         </span>
       </div>
 
-      <div className="space-y-3">
-        {tasks.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-gray-300 bg-white/50 p-4 text-center text-sm text-gray-500">
-            {isFiltering ? 'Không tìm thấy công việc phù hợp' : 'Chưa có công việc'}
-          </div>
-        ) : (
-          tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onDelete={onDelete}
-              onEdit={onEdit}
-              onOpenDetail={onOpenDetail}
-            />
-          ))
-        )}
-      </div>
+      <SortableContext items={sortedTasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-3">
+          {sortedTasks.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-gray-300 bg-white/50 p-4 text-center text-sm text-gray-500">
+              {isFiltering ? 'Không tìm thấy công việc phù hợp' : 'Chưa có công việc'}
+            </div>
+          ) : (
+            sortedTasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                onOpenDetail={onOpenDetail}
+              />
+            ))
+          )}
+        </div>
+      </SortableContext>
     </div>
   );
 }
@@ -215,7 +225,7 @@ export default function ProjectDetailPage() {
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [statusUpdateError, setStatusUpdateError] = useState(false);
+  const [reorderError, setReorderError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
 
@@ -290,40 +300,60 @@ export default function ProjectDetailPage() {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
     const draggedTaskId = String(active.id);
-    const targetStatus = String(over.id) as TaskStatus;
-    if (!TASK_STATUSES.includes(targetStatus as TaskStatus)) return;
+    const overId = String(over.id);
+    if (draggedTaskId === overId) return;
 
-    const taskToUpdate = tasks.find((task) => task.id === draggedTaskId);
-    if (!taskToUpdate || taskToUpdate.status === targetStatus) return;
+    const draggedTask = tasks.find((task) => task.id === draggedTaskId);
+    if (!draggedTask) return;
+
+    let targetStatus: TaskStatus;
+    if (isTaskStatus(overId)) {
+      targetStatus = overId;
+    } else {
+      const overTask = tasks.find((task) => task.id === overId);
+      if (!overTask) return;
+      targetStatus = overTask.status;
+    }
+
+    const destTasksExcludingActive = tasks
+      .filter((task) => task.status === targetStatus && task.id !== draggedTaskId)
+      .sort((a, b) => a.order - b.order);
+    const overIndex = destTasksExcludingActive.findIndex((task) => task.id === overId);
+    const targetIndex = overIndex === -1 ? destTasksExcludingActive.length : overIndex;
+
+    const updates = reorderTasksOnDrop(tasks, draggedTaskId, targetStatus, targetIndex);
+    if (updates.length === 0) return;
 
     const prevTasks = tasks;
+    const updatesById = new Map(updates.map((update) => [update.id, update]));
     setTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === draggedTaskId ? { ...task, status: targetStatus } : task
-      )
+      currentTasks.map((task) => {
+        const update = updatesById.get(task.id);
+        return update ? { ...task, status: update.status as TaskStatus, order: update.order } : task;
+      })
     );
 
     try {
-      setStatusUpdateError(false);
-      const response = await fetch(`/api/tasks/${draggedTaskId}`, {
-        method: 'PATCH',
+      setReorderError(false);
+      const response = await fetch('/api/tasks/reorder', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: targetStatus }),
+        body: JSON.stringify({ updates }),
       });
 
       if (!response.ok) {
         setTasks(prevTasks);
-        setStatusUpdateError(true);
+        setReorderError(true);
       }
     } catch (error) {
-      console.error('Failed to update task status:', error);
+      console.error('Failed to reorder tasks:', error);
       setTasks(prevTasks);
-      setStatusUpdateError(true);
+      setReorderError(true);
     }
   };
 
@@ -451,10 +481,10 @@ export default function ProjectDetailPage() {
           </Select>
         </div>
 
-        {statusUpdateError && (
+        {reorderError && (
           <Alert className="mb-6">
-            <p className="font-medium">Không lưu được trạng thái task, task đã được khôi phục</p>
-            <Button variant="outline" className="mt-3" onClick={() => setStatusUpdateError(false)}>
+            <p className="font-medium">Không lưu được thứ tự task, task đã được khôi phục</p>
+            <Button variant="outline" className="mt-3" onClick={() => setReorderError(false)}>
               Đã hiểu
             </Button>
           </Alert>

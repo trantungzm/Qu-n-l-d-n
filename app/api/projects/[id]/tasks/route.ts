@@ -10,7 +10,7 @@ export async function GET(
   try {
     const tasks = await prisma.task.findMany({
       where: { projectId: params.id },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { order: 'asc' },
       include: { subTasks: { orderBy: { createdAt: 'asc' } } },
     });
     return NextResponse.json(tasks);
@@ -50,13 +50,22 @@ export async function POST(
       parsedDueDate = candidate;
     }
 
+    const taskStatus = normalizeTaskStatus(status);
+    const topTask = await prisma.task.findFirst({
+      where: { projectId: params.id, status: taskStatus },
+      orderBy: { order: 'asc' },
+      select: { order: true },
+    });
+    const order = topTask ? topTask.order - 1 : 0;
+
     const task = await prisma.task.create({
       data: {
         title: title.trim(),
         projectId: params.id,
-        status: normalizeTaskStatus(status),
+        status: taskStatus,
         priority: normalizeTaskPriority(priority),
         dueDate: parsedDueDate,
+        order,
       },
     });
 
