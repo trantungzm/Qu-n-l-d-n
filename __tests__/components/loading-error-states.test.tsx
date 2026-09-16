@@ -23,18 +23,29 @@ jest.mock('@dnd-kit/core', () => ({
   },
   closestCenter: jest.fn(),
   PointerSensor: jest.fn(),
-  useDraggable: () => ({
-    attributes: {},
-    listeners: {},
-    setNodeRef: jest.fn(),
-    transform: null,
-  }),
   useDroppable: () => ({
     setNodeRef: jest.fn(),
     isOver: false,
   }),
   useSensor: jest.fn(),
   useSensors: jest.fn(),
+}));
+
+jest.mock('@dnd-kit/sortable', () => ({
+  SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useSortable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: jest.fn(),
+    transform: null,
+    transition: undefined,
+    isDragging: false,
+  }),
+  verticalListSortingStrategy: jest.fn(),
+}));
+
+jest.mock('@dnd-kit/utilities', () => ({
+  CSS: { Transform: { toString: () => undefined } },
 }));
 
 describe('loading and error recovery', () => {
@@ -84,6 +95,7 @@ describe('loading and error recovery', () => {
       status: 'todo',
       projectId: 'project-1',
       createdAt: '2026-08-28T00:00:00.000Z',
+      order: 0,
     };
     const fetchMock = jest
       .fn()
@@ -109,11 +121,68 @@ describe('loading and error recovery', () => {
       expect(within(todoColumn as HTMLElement).getByText('Rollback me')).toBeInTheDocument();
       expect(within(doingColumn as HTMLElement).queryByText('Rollback me')).not.toBeInTheDocument();
     });
-    expect(screen.getByText('Không lưu được trạng thái task, task đã được khôi phục')).toBeInTheDocument();
+    expect(screen.getByText('Không lưu được thứ tự task, task đã được khôi phục')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenNthCalledWith(
       3,
-      '/api/tasks/task-1',
-      expect.objectContaining({ method: 'PATCH' }),
+      '/api/tasks/reorder',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ updates: [{ id: 'task-1', status: 'doing', order: 0 }] }),
+      }),
+    );
+  });
+
+  it('rolls a task back to its original position when reordering within the same column fails', async () => {
+    const project = {
+      id: 'project-1',
+      name: 'Project',
+      description: null,
+      createdAt: '2026-08-28T00:00:00.000Z',
+    };
+    const taskA = {
+      id: 'task-a',
+      title: 'Task A',
+      status: 'todo',
+      projectId: 'project-1',
+      createdAt: '2026-08-28T00:00:00.000Z',
+      order: 0,
+    };
+    const taskB = {
+      id: 'task-b',
+      title: 'Task B',
+      status: 'todo',
+      projectId: 'project-1',
+      createdAt: '2026-08-29T00:00:00.000Z',
+      order: 1,
+    };
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [project] })
+      .mockResolvedValueOnce({ ok: true, json: async () => [taskA, taskB] })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) });
+    global.fetch = fetchMock as typeof fetch;
+
+    render(<ProjectDetailPage />);
+    await screen.findByText('Task A');
+
+    const todoColumn = screen.getByRole('heading', { name: 'Todo' }).parentElement?.parentElement as HTMLElement;
+    const titlesBefore = within(todoColumn).getAllByText(/^Task [AB]$/).map((el) => el.textContent);
+    expect(titlesBefore).toEqual(['Task A', 'Task B']);
+
+    // Move "task-b" (last) to the front of the same column.
+    await act(async () => {
+      await dragEndHandler?.({ active: { id: 'task-b' }, over: { id: 'task-a' } });
+    });
+
+    await waitFor(() => {
+      const titlesAfter = within(todoColumn).getAllByText(/^Task [AB]$/).map((el) => el.textContent);
+      expect(titlesAfter).toEqual(['Task A', 'Task B']);
+    });
+    expect(screen.getByText('Không lưu được thứ tự task, task đã được khôi phục')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      '/api/tasks/reorder',
+      expect.objectContaining({ method: 'POST' }),
     );
   });
 });
