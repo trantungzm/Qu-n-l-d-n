@@ -8,12 +8,23 @@ import { Plus, Trash2, ArrowRight, Pencil } from 'lucide-react';
 import { CreateProjectDialog, EditProjectDialog } from '@/components/create-project-dialog';
 import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Project {
   id: string;
   name: string;
   description: string | null;
   createdAt: string;
+  _count?: { tasks: number };
 }
 
 export default function Home() {
@@ -22,6 +33,7 @@ export default function Home() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -47,8 +59,6 @@ export default function Home() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa dự án này?')) return;
-    
     try {
       const response = await fetch(`/api/projects/${id}`, {
         method: 'DELETE',
@@ -58,6 +68,8 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Failed to delete project:', error);
+    } finally {
+      setDeletingProject(null);
     }
   };
 
@@ -160,7 +172,7 @@ export default function Home() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDelete(project.id)}
+                      onClick={() => setDeletingProject(project)}
                       className="flex-1"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
@@ -189,6 +201,29 @@ export default function Home() {
         project={editingProject}
         onProjectUpdated={handleProjectUpdated}
       />
+
+      <AlertDialog
+        open={deletingProject !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeletingProject(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa dự án {deletingProject?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hành động này sẽ xóa vĩnh viễn {deletingProject?.name} và toàn bộ{' '}
+              {deletingProject?._count?.tasks ?? 0} công việc bên trong. Không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeletingProject(null)}>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deletingProject && handleDelete(deletingProject.id)}>
+              Xóa vĩnh viễn
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
