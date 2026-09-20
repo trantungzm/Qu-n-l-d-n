@@ -1,6 +1,8 @@
 import {
   countTasksByStatus,
   countOverdueTasks,
+  countDueSoonTasks,
+  countReminderTasks,
   countOpenTasksByPriority,
   getUpcomingTasks,
   getProjectProgress,
@@ -72,6 +74,63 @@ describe('countOverdueTasks', () => {
 
   it('returns 0 for an empty list', () => {
     expect(countOverdueTasks([], today)).toBe(0);
+  });
+});
+
+describe('countDueSoonTasks', () => {
+  const today = new Date('2026-09-15T12:00:00.000Z');
+
+  it('counts not-done tasks due today', () => {
+    const tasks = [
+      makeTask({ id: '1', dueDate: '2026-09-15', status: 'todo' }),
+      makeTask({ id: '2', dueDate: '2026-09-15', status: 'doing' }),
+      makeTask({ id: '3', dueDate: '2026-09-16', status: 'todo' }),
+    ];
+
+    expect(countDueSoonTasks(tasks, today)).toBe(2);
+  });
+
+  it('excludes a done task due today', () => {
+    const tasks = [makeTask({ dueDate: '2026-09-15', status: 'done' })];
+    expect(countDueSoonTasks(tasks, today)).toBe(0);
+  });
+
+  it('excludes an overdue task', () => {
+    const tasks = [makeTask({ dueDate: '2026-09-01', status: 'todo' })];
+    expect(countDueSoonTasks(tasks, today)).toBe(0);
+  });
+
+  it('ignores tasks without a due date', () => {
+    const tasks = [makeTask({ dueDate: null, status: 'todo' })];
+    expect(countDueSoonTasks(tasks, today)).toBe(0);
+  });
+
+  it('returns 0 for an empty list', () => {
+    expect(countDueSoonTasks([], today)).toBe(0);
+  });
+});
+
+describe('countReminderTasks', () => {
+  const today = new Date('2026-09-15T12:00:00.000Z');
+
+  it('sums overdue and due-soon tasks', () => {
+    const tasks = [
+      makeTask({ id: '1', dueDate: '2026-09-01', status: 'todo' }), // overdue
+      makeTask({ id: '2', dueDate: '2026-09-15', status: 'todo' }), // due soon
+      makeTask({ id: '3', dueDate: '2026-09-20', status: 'todo' }), // future
+      makeTask({ id: '4', dueDate: '2026-09-01', status: 'done' }), // done, ignored
+    ];
+
+    expect(countReminderTasks(tasks, today)).toBe(2);
+  });
+
+  it('returns 0 when there are no overdue or due-soon tasks', () => {
+    const tasks = [makeTask({ dueDate: '2026-09-20', status: 'todo' })];
+    expect(countReminderTasks(tasks, today)).toBe(0);
+  });
+
+  it('returns 0 for an empty list', () => {
+    expect(countReminderTasks([], today)).toBe(0);
   });
 });
 

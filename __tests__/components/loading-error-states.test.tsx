@@ -61,14 +61,18 @@ describe('loading and error recovery', () => {
       description: null,
       createdAt: '2026-08-28T00:00:00.000Z',
     };
-    const fetchMock = jest
-      .fn()
-      .mockRejectedValueOnce(new Error('network failure'))
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [project],
-      });
-    global.fetch = fetchMock as typeof fetch;
+    let projectsAttempts = 0;
+    const fetchMock = jest.fn((url: RequestInfo | URL) => {
+      if (url === '/api/tasks/reminders') {
+        return Promise.resolve({ ok: true, json: async () => ({ count: 0 }) });
+      }
+      projectsAttempts += 1;
+      if (projectsAttempts === 1) {
+        return Promise.reject(new Error('network failure'));
+      }
+      return Promise.resolve({ ok: true, json: async () => [project] });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
 
     render(<Home />);
 
@@ -77,9 +81,11 @@ describe('loading and error recovery', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(projectsAttempts).toBe(2));
     expect(await screen.findByText('Recovered project')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/projects');
+    expect(
+      fetchMock.mock.calls.filter(([url]) => url === '/api/projects')
+    ).toHaveLength(2);
   });
 
   it('rolls a task back to its original column when status update fails', async () => {

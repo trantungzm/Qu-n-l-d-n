@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { Folder, LayoutDashboard, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTaskReminderCount } from '@/lib/use-task-reminder-count';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dự án', icon: Folder },
@@ -20,6 +21,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const user = session?.user;
+  const reminderCount = useTaskReminderCount(pathname);
 
   return (
     <aside className="flex h-screen w-16 shrink-0 flex-col border-r border-gray-200 bg-white md:w-64">
@@ -30,6 +32,7 @@ export function Sidebar() {
       <nav className="flex-1 space-y-1 px-2 py-4">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = isActiveRoute(pathname, href);
+          const showReminderBadge = href === '/dashboard' && reminderCount > 0;
           return (
             <Link
               key={href}
@@ -42,7 +45,17 @@ export function Sidebar() {
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )}
             >
-              <Icon className="h-5 w-5 shrink-0" />
+              <span className="relative shrink-0">
+                <Icon className="h-5 w-5" />
+                {showReminderBadge && (
+                  <span
+                    className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white"
+                    aria-label={`${reminderCount} công việc sắp đến hạn hoặc quá hạn`}
+                  >
+                    {reminderCount > 99 ? '99+' : reminderCount}
+                  </span>
+                )}
+              </span>
               <span className="hidden md:inline">{label}</span>
             </Link>
           );

@@ -1,4 +1,4 @@
-import { isTaskOverdue } from './task-due-date';
+import { isTaskOverdue, isTaskDueSoon } from './task-due-date';
 import { normalizeTaskPriority } from './task-priority';
 import { normalizeTaskStatus } from './task-status';
 
@@ -43,6 +43,20 @@ export function countOverdueTasks<T extends { status: string; dueDate?: string |
   now: Date = new Date()
 ): number {
   return tasks.filter((task) => isTaskOverdue(task.dueDate, task.status, now)).length;
+}
+
+export function countDueSoonTasks<T extends { status: string; dueDate?: string | Date | null }>(
+  tasks: T[],
+  now: Date = new Date()
+): number {
+  return tasks.filter((task) => isTaskDueSoon(task.dueDate, task.status, now)).length;
+}
+
+export function countReminderTasks<T extends { status: string; dueDate?: string | Date | null }>(
+  tasks: T[],
+  now: Date = new Date()
+): number {
+  return countOverdueTasks(tasks, now) + countDueSoonTasks(tasks, now);
 }
 
 export function countOpenTasksByPriority<T extends { status: string; priority: string }>(
