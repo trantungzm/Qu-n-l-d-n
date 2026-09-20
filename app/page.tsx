@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, ArrowRight, Pencil } from 'lucide-react';
 import { CreateProjectDialog, EditProjectDialog } from '@/components/create-project-dialog';
+import { ProjectProgressBar } from '@/components/project-progress-bar';
 import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { ProjectProgress } from '@/lib/dashboard-stats';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +27,7 @@ interface Project {
   description: string | null;
   createdAt: string;
   _count?: { tasks: number };
+  progress?: ProjectProgress;
 }
 
 export default function Home() {
@@ -150,6 +153,9 @@ export default function Home() {
                   <p className="text-gray-700 mb-4 line-clamp-3">
                     {project.description || 'Không có mô tả'}
                   </p>
+                  {project.progress && (
+                    <ProjectProgressBar progress={project.progress} className="mb-4" />
+                  )}
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
