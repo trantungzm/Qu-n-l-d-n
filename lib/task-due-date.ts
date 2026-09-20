@@ -14,6 +14,24 @@ export function isTaskOverdue(
   return startOfDueDate.getTime() < startOfToday.getTime();
 }
 
+export function isTaskDueSoon(
+  dueDate: string | Date | null | undefined,
+  status: string,
+  now: Date = new Date()
+): boolean {
+  if (!dueDate || status === 'done') return false;
+
+  const due = typeof dueDate === 'string' ? new Date(dueDate) : dueDate;
+  if (Number.isNaN(due.getTime())) return false;
+
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDueDate = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+
+  // dueDate has no time component, so "within the next 24 hours" is treated
+  // at day granularity: due today, not yet overdue.
+  return startOfDueDate.getTime() === startOfToday.getTime();
+}
+
 export function formatDueDate(dueDate: string | Date): string {
   const due = typeof dueDate === 'string' ? new Date(dueDate) : dueDate;
   const day = due.getDate().toString().padStart(2, '0');

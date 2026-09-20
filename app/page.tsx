@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, ArrowRight, Pencil } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, Pencil, AlertTriangle, X } from 'lucide-react';
 import { CreateProjectDialog, EditProjectDialog } from '@/components/create-project-dialog';
 import { ProjectProgressBar } from '@/components/project-progress-bar';
 import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ProjectProgress } from '@/lib/dashboard-stats';
+import { useTaskReminderCount } from '@/lib/use-task-reminder-count';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +41,8 @@ export default function Home() {
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const reminderCount = useTaskReminderCount();
+  const [reminderDismissed, setReminderDismissed] = useState(false);
 
   const fetchProjects = async () => {
     setLoading(true);
@@ -112,6 +116,34 @@ export default function Home() {
             </Button>
           </div>
         </div>
+
+        {reminderCount > 0 && !reminderDismissed && (
+          <Alert className="mb-6 flex items-start justify-between gap-4 border-amber-400 bg-amber-50 text-amber-900">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <div>
+                <p className="font-medium">
+                  Bạn có {reminderCount} công việc sắp đến hạn hoặc đã quá hạn
+                </p>
+                <Link
+                  href="/dashboard"
+                  className="text-sm font-medium text-amber-700 underline hover:text-amber-900"
+                >
+                  Xem trên Dashboard
+                </Link>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Đóng thông báo"
+              onClick={() => setReminderDismissed(true)}
+              className="h-8 w-8 shrink-0 p-0 text-amber-700 hover:bg-amber-100 hover:text-amber-900"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </Alert>
+        )}
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" aria-label="Đang tải dự án">
