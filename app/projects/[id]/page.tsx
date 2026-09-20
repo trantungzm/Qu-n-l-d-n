@@ -22,6 +22,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Plus, Trash2, Pencil } from 'lucide-react';
 import { CreateTaskDialog } from '@/components/create-task-dialog';
 import { EditTaskDialog } from '@/components/edit-task-dialog';
+import { ProjectProgressBar } from '@/components/project-progress-bar';
 import { TASK_STATUSES, isTaskStatus, type TaskStatus } from '@/lib/task-status';
 import { reorderTasksOnDrop } from '@/lib/task-order';
 import { Alert } from '@/components/ui/alert';
@@ -38,6 +39,7 @@ import {
   PRIORITY_LABELS,
   TASK_PRIORITIES,
 } from '@/lib/task-priority';
+import { getProjectProgress, countOverdueTasks, countOpenTasksByPriority } from '@/lib/dashboard-stats';
 import { TaskDetailDialog, type SubTask } from '@/components/task-detail-dialog';
 
 interface Task {
@@ -231,6 +233,10 @@ export default function ProjectDetailPage() {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const filteredTasks = filterTasksByPriority(filterTasksByTitle(tasks, searchQuery), priorityFilter);
+
+  const progress = getProjectProgress(tasks);
+  const overdueCount = countOverdueTasks(tasks);
+  const openPriorityCounts = countOpenTasksByPriority(tasks);
 
   const fetchProject = async () => {
     try {
@@ -432,6 +438,39 @@ export default function ProjectDetailPage() {
           <p className="text-sm text-gray-500 mt-1">
             Ngày tạo: {new Date(project.createdAt).toLocaleDateString('vi-VN')}
           </p>
+        </div>
+
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Card>
+            <CardContent className="py-4">
+              <ProjectProgressBar progress={progress} />
+            </CardContent>
+          </Card>
+
+          <Card className={overdueCount > 0 ? 'border-red-400 bg-red-50' : ''}>
+            <CardContent className="flex items-center justify-between py-4">
+              <span className="text-sm font-medium text-gray-600">Task quá hạn</span>
+              <span
+                className={`text-2xl font-bold ${overdueCount > 0 ? 'text-red-600' : 'text-gray-700'}`}
+              >
+                {overdueCount}
+              </span>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="py-4">
+              <p className="mb-2 text-sm font-medium text-gray-600">Đang mở theo mức ưu tiên</p>
+              <ul className="space-y-1 text-sm">
+                {TASK_PRIORITIES.map((priority) => (
+                  <li key={priority} className="flex items-center justify-between">
+                    <span>{PRIORITY_LABELS[priority]}</span>
+                    <span className="font-semibold text-gray-900">{openPriorityCounts[priority]}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex justify-between items-center mb-6">

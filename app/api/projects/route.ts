@@ -1,13 +1,23 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getProjectProgress } from '@/lib/dashboard-stats';
 
 export async function GET() {
   try {
     const projects = await prisma.project.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { tasks: true } } },
+      include: {
+        _count: { select: { tasks: true } },
+        tasks: { select: { status: true } },
+      },
     });
-    return NextResponse.json(projects);
+
+    const projectsWithProgress = projects.map(({ tasks, ...project }) => ({
+      ...project,
+      progress: getProjectProgress(tasks),
+    }));
+
+    return NextResponse.json(projectsWithProgress);
   } catch (error) {
     console.error('Error fetching projects:', error);
     return NextResponse.json(

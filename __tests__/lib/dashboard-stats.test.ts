@@ -3,6 +3,7 @@ import {
   countOverdueTasks,
   countOpenTasksByPriority,
   getUpcomingTasks,
+  getProjectProgress,
   type DashboardTask,
 } from '@/lib/dashboard-stats';
 
@@ -145,5 +146,35 @@ describe('getUpcomingTasks', () => {
       makeTask({ id: String(i), dueDate: `2026-09-${16 + i}`, status: 'todo' })
     );
     expect(getUpcomingTasks(tasks, today)).toHaveLength(5);
+  });
+});
+
+describe('getProjectProgress', () => {
+  it('returns 0 total and 0 percent for an empty task list without dividing by zero', () => {
+    expect(getProjectProgress([])).toEqual({ done: 0, total: 0, percent: 0 });
+  });
+
+  it('returns 100 percent when all tasks are done', () => {
+    const tasks = [
+      makeTask({ id: '1', status: 'done' }),
+      makeTask({ id: '2', status: 'done' }),
+    ];
+
+    expect(getProjectProgress(tasks)).toEqual({ done: 2, total: 2, percent: 100 });
+  });
+
+  it('computes a rounded percentage for a partially completed project', () => {
+    const tasks = [
+      makeTask({ id: '1', status: 'done' }),
+      makeTask({ id: '2', status: 'todo' }),
+      makeTask({ id: '3', status: 'doing' }),
+    ];
+
+    expect(getProjectProgress(tasks)).toEqual({ done: 1, total: 3, percent: 33 });
+  });
+
+  it('treats an unknown status as not done', () => {
+    const tasks = [makeTask({ id: '1', status: 'unknown' })];
+    expect(getProjectProgress(tasks)).toEqual({ done: 0, total: 1, percent: 0 });
   });
 });
