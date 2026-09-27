@@ -132,12 +132,12 @@ export function TaskDetailDialog({
         className="fixed inset-0 bg-black/50"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative z-50 flex max-h-[80vh] w-full max-w-md flex-col rounded-lg bg-white p-6 shadow-lg mx-4">
+      <div className="relative z-50 flex max-h-[80vh] w-full max-w-md flex-col rounded-lg bg-white text-gray-900 p-6 shadow-lg mx-4 dark:bg-gray-800 dark:text-gray-100">
         <div className="mb-4 flex flex-col space-y-1.5">
           <h2 className="text-lg font-semibold leading-none tracking-tight">
             {task.title}
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {subTasks.length > 0
               ? `${doneCount}/${subTasks.length} việc con đã hoàn thành`
               : 'Chưa có việc con nào'}
@@ -150,18 +150,20 @@ export function TaskDetailDialog({
           {subTasks.map((subTask) => (
             <div
               key={subTask.id}
-              className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2"
+              className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 dark:border-gray-700"
             >
               <input
                 type="checkbox"
                 checked={subTask.done}
                 onChange={() => handleToggle(subTask)}
                 aria-label={`Đánh dấu hoàn thành: ${subTask.title}`}
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
               />
               <span
                 className={`flex-1 text-sm ${
-                  subTask.done ? 'text-gray-400 line-through' : 'text-gray-800'
+                  subTask.done
+                    ? 'text-gray-400 line-through dark:text-gray-500'
+                    : 'text-gray-800 dark:text-gray-100'
                 }`}
               >
                 {subTask.title}
@@ -172,7 +174,7 @@ export function TaskDetailDialog({
                 size="sm"
                 onClick={() => handleDelete(subTask.id)}
                 aria-label={`Xóa: ${subTask.title}`}
-                className="h-7 w-7 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="h-7 w-7 p-0 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

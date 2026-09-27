@@ -32,7 +32,7 @@ const AlertDialogContent = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "relative bg-white rounded-lg shadow-lg p-6 w-full max-w-lg mx-4",
+      "relative bg-white text-gray-900 rounded-lg shadow-lg p-6 w-full max-w-lg mx-4 dark:bg-gray-800 dark:text-gray-100",
       className
     )}
     {...props}
@@ -80,7 +80,7 @@ const AlertDialogDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <p ref={ref} className={cn("text-sm text-gray-500", className)} {...props} />
+  <p ref={ref} className={cn("text-sm text-gray-500 dark:text-gray-400", className)} {...props} />
 ));
 AlertDialogDescription.displayName = "AlertDialogDescription";
 

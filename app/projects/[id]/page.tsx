@@ -68,9 +68,9 @@ const statusLabels: Record<TaskStatus, string> = {
 };
 
 const columnStyles: Record<TaskStatus, string> = {
-  todo: 'border-sky-200 bg-sky-50',
-  doing: 'border-amber-200 bg-amber-50',
-  done: 'border-emerald-200 bg-emerald-50',
+  todo: 'border-sky-200 bg-sky-50 dark:border-sky-900 dark:bg-sky-950/40',
+  doing: 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40',
+  done: 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40',
 };
 
 function TaskCard({
@@ -104,13 +104,13 @@ function TaskCard({
       {...listeners}
       {...attributes}
       onClick={() => onOpenDetail(task)}
-      className="cursor-grab active:cursor-grabbing overflow-hidden border border-gray-200 bg-white shadow-sm"
+      className="cursor-grab active:cursor-grabbing overflow-hidden border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
     >
       <CardContent className="p-3">
         <div className="flex items-start justify-between gap-2">
-          <p className="flex-1 text-sm font-medium text-gray-800">{task.title}</p>
+          <p className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100">{task.title}</p>
           {subTaskCount > 0 && (
-            <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+            <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               {subTaskDoneCount}/{subTaskCount}
             </span>
           )}
@@ -121,7 +121,7 @@ function TaskCard({
               e.stopPropagation();
               onEdit(task);
             }}
-            className="h-8 w-8 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-100"
+            className="h-8 w-8 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -132,7 +132,7 @@ function TaskCard({
               e.stopPropagation();
               onDelete(task.id);
             }}
-            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -149,7 +149,9 @@ function TaskCard({
         {task.dueDate && (
           <p
             className={`mt-2 text-xs font-medium ${
-              isTaskOverdue(task.dueDate, task.status) ? 'text-red-600' : 'text-gray-500'
+              isTaskOverdue(task.dueDate, task.status)
+                ? 'text-red-600 dark:text-red-400'
+                : 'text-gray-500 dark:text-gray-400'
             }`}
           >
             Hạn: {formatDueDate(task.dueDate)}
@@ -186,8 +188,8 @@ function TaskColumn({
       }`}
     >
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">{statusLabels[status]}</h3>
-        <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-gray-700">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{statusLabels[status]}</h3>
+        <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
           {sortedTasks.length}
         </span>
       </div>
@@ -195,7 +197,7 @@ function TaskColumn({
       <SortableContext items={sortedTasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-3">
           {sortedTasks.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-300 bg-white/50 p-4 text-center text-sm text-gray-500">
+            <div className="rounded-lg border border-dashed border-gray-300 bg-white/50 p-4 text-center text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-400">
               {isFiltering ? 'Không tìm thấy công việc phù hợp' : 'Chưa có công việc'}
             </div>
           ) : (
@@ -370,14 +372,14 @@ export default function ProjectDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900">
         <div className="container mx-auto px-4 py-8">
           <Skeleton className="mb-4 h-9 w-24" />
           <Skeleton className="mb-3 h-10 w-2/3" />
           <Skeleton className="mb-8 h-5 w-1/2" />
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3" aria-label="Đang tải task">
             {TASK_STATUSES.map((status) => (
-              <div key={status} className="min-h-[420px] rounded-xl border-2 border-gray-200 bg-white p-4">
+              <div key={status} className="min-h-[420px] rounded-xl border-2 border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                 <div className="mb-6 flex justify-between">
                   <Skeleton className="h-6 w-24" />
                   <Skeleton className="h-6 w-8 rounded-full" />
@@ -396,7 +398,7 @@ export default function ProjectDetailPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900">
         <div className="container mx-auto px-4 py-8">
           <Alert>
             <p className="font-medium">Không tải được dữ liệu, thử lại</p>
@@ -411,10 +413,10 @@ export default function ProjectDetailPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12">
-            <p className="text-gray-600 text-lg">Không tìm thấy dự án</p>
+            <p className="text-gray-600 dark:text-gray-400 text-lg">Không tìm thấy dự án</p>
             <Button onClick={() => router.push('/')} className="mt-4">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Quay lại trang chủ
@@ -426,16 +428,16 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <Button variant="outline" onClick={() => router.push('/')} className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Quay lại
           </Button>
-          <h1 className="text-4xl font-bold text-gray-900">{project.name}</h1>
-          <p className="text-gray-600 mt-2">{project.description || 'Không có mô tả'}</p>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">{project.name}</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">{project.description || 'Không có mô tả'}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Ngày tạo: {new Date(project.createdAt).toLocaleDateString('vi-VN')}
           </p>
         </div>
@@ -447,11 +449,15 @@ export default function ProjectDetailPage() {
             </CardContent>
           </Card>
 
-          <Card className={overdueCount > 0 ? 'border-red-400 bg-red-50' : ''}>
+          <Card className={overdueCount > 0 ? 'border-red-400 bg-red-50 dark:border-red-700 dark:bg-red-950' : ''}>
             <CardContent className="flex items-center justify-between py-4">
-              <span className="text-sm font-medium text-gray-600">Task quá hạn</span>
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Task quá hạn</span>
               <span
-                className={`text-2xl font-bold ${overdueCount > 0 ? 'text-red-600' : 'text-gray-700'}`}
+                className={`text-2xl font-bold ${
+                  overdueCount > 0
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-gray-700 dark:text-gray-300'
+                }`}
               >
                 {overdueCount}
               </span>
@@ -460,12 +466,12 @@ export default function ProjectDetailPage() {
 
           <Card>
             <CardContent className="py-4">
-              <p className="mb-2 text-sm font-medium text-gray-600">Đang mở theo mức ưu tiên</p>
+              <p className="mb-2 text-sm font-medium text-gray-600 dark:text-gray-400">Đang mở theo mức ưu tiên</p>
               <ul className="space-y-1 text-sm">
                 {TASK_PRIORITIES.map((priority) => (
-                  <li key={priority} className="flex items-center justify-between">
+                  <li key={priority} className="flex items-center justify-between text-gray-700 dark:text-gray-300">
                     <span>{PRIORITY_LABELS[priority]}</span>
-                    <span className="font-semibold text-gray-900">{openPriorityCounts[priority]}</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{openPriorityCounts[priority]}</span>
                   </li>
                 ))}
               </ul>
@@ -474,7 +480,7 @@ export default function ProjectDetailPage() {
         </div>
 
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold text-gray-900">Board</h2>
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Board</h2>
           <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="mr-2 h-5 w-5" />
             Thêm task mới
@@ -483,7 +489,7 @@ export default function ProjectDetailPage() {
 
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative max-w-xl flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <Input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}

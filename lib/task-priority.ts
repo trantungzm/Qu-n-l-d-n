@@ -17,9 +17,9 @@ export const PRIORITY_LABELS: Record<TaskPriority, string> = {
 };
 
 export const PRIORITY_BADGE_CLASSES: Record<TaskPriority, string> = {
-  high: 'border-red-400 bg-red-50 text-red-700',
-  medium: 'border-amber-400 bg-amber-50 text-amber-700',
-  low: 'border-emerald-400 bg-emerald-50 text-emerald-700',
+  high: 'border-red-400 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300',
+  medium: 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300',
+  low: 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
 };
 
 export interface PrioritizedTask {

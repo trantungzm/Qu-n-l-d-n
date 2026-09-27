@@ -105,10 +105,10 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Quản lý dự án cá nhân</h1>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">Quản lý dự án cá nhân</h1>
           <div className="flex items-center gap-3">
             <Button onClick={() => setIsDialogOpen(true)} size="lg">
               <Plus className="mr-2 h-5 w-5" />
@@ -118,16 +118,16 @@ export default function Home() {
         </div>
 
         {reminderCount > 0 && !reminderDismissed && (
-          <Alert className="mb-6 flex items-start justify-between gap-4 border-amber-400 bg-amber-50 text-amber-900">
+          <Alert className="mb-6 flex items-start justify-between gap-4 border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
               <div>
                 <p className="font-medium">
                   Bạn có {reminderCount} công việc sắp đến hạn hoặc đã quá hạn
                 </p>
                 <Link
                   href="/dashboard"
-                  className="text-sm font-medium text-amber-700 underline hover:text-amber-900"
+                  className="text-sm font-medium text-amber-700 underline hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100"
                 >
                   Xem trên Dashboard
                 </Link>
@@ -138,7 +138,7 @@ export default function Home() {
               size="sm"
               aria-label="Đóng thông báo"
               onClick={() => setReminderDismissed(true)}
-              className="h-8 w-8 shrink-0 p-0 text-amber-700 hover:bg-amber-100 hover:text-amber-900"
+              className="h-8 w-8 shrink-0 p-0 text-amber-700 hover:bg-amber-100 hover:text-amber-900 dark:text-amber-300 dark:hover:bg-amber-900 dark:hover:text-amber-100"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -169,7 +169,7 @@ export default function Home() {
           </Alert>
         ) : projects.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-600 text-lg">Chưa có dự án nào. Hãy tạo dự án mới!</p>
+            <p className="text-gray-600 dark:text-gray-400 text-lg">Chưa có dự án nào. Hãy tạo dự án mới!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -182,7 +182,7 @@ export default function Home() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-700 mb-4 line-clamp-3">
+                  <p className="text-gray-700 dark:text-gray-300 mb-4 line-clamp-3">
                     {project.description || 'Không có mô tả'}
                   </p>
                   {project.progress && (
