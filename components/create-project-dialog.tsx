@@ -141,7 +141,7 @@ function ProjectDialog({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <label htmlFor="project-name" className="text-sm font-medium">
-                Tên dự án <span className="text-red-500">*</span>
+                Tên dự án <span className="text-red-500 dark:text-red-400">*</span>
               </label>
               <Input
                 id="project-name"

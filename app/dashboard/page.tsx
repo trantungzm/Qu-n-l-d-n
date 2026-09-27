@@ -57,7 +57,7 @@ async function getDashboardTasks(): Promise<DashboardTask[]> {
 
 function buildStatusConicGradient(statusCounts: StatusCounts): string {
   const total = statusCounts.todo + statusCounts.doing + statusCounts.done;
-  if (total === 0) return '#e5e7eb';
+  if (total === 0) return '#9ca3af';
 
   let cursor = 0;
   const segments: string[] = [];
@@ -83,29 +83,35 @@ export default async function DashboardPage() {
   const totalTasks = statusCounts.todo + statusCounts.doing + statusCounts.done;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">Tổng quan</h1>
-            <p className="text-gray-600 mt-1">Thống kê Task trên tất cả dự án</p>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">Tổng quan</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Thống kê Task trên tất cả dự án</p>
           </div>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+            className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
           >
             <ArrowRight className="h-4 w-4 rotate-180" />
             Về trang dự án
           </Link>
         </div>
 
-        <Card className={overdueCount > 0 ? 'border-red-400 bg-red-50 mb-6' : 'mb-6'}>
+        <Card
+          className={
+            overdueCount > 0
+              ? 'border-red-400 bg-red-50 mb-6 dark:border-red-700 dark:bg-red-950'
+              : 'mb-6'
+          }
+        >
           <CardContent className="flex items-center gap-4 py-6">
             <div
               className={
                 overdueCount > 0
-                  ? 'flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-red-600'
-                  : 'flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-500'
+                  ? 'flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300'
+                  : 'flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
               }
             >
               <AlertTriangle className="h-7 w-7" />
@@ -113,12 +119,14 @@ export default async function DashboardPage() {
             <div>
               <p
                 className={
-                  overdueCount > 0 ? 'text-3xl font-bold text-red-600' : 'text-3xl font-bold text-gray-700'
+                  overdueCount > 0
+                    ? 'text-3xl font-bold text-red-600 dark:text-red-400'
+                    : 'text-3xl font-bold text-gray-700 dark:text-gray-300'
                 }
               >
                 {overdueCount}
               </p>
-              <p className="text-sm text-gray-600">Task quá hạn (chưa hoàn thành)</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Task quá hạn (chưa hoàn thành)</p>
             </div>
           </CardContent>
         </Card>
@@ -138,11 +146,11 @@ export default async function DashboardPage() {
               <ul className="space-y-2 flex-1">
                 {STATUS_ORDER.map((key) => (
                   <li key={key} className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <span className="h-3 w-3 rounded-full" style={{ backgroundColor: STATUS_COLORS[key] }} />
                       {STATUS_LABELS[key]}
                     </span>
-                    <span className="font-semibold text-gray-900">{statusCounts[key]}</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{statusCounts[key]}</span>
                   </li>
                 ))}
               </ul>
@@ -161,7 +169,7 @@ export default async function DashboardPage() {
                     <span className={`rounded-full border px-3 py-1 text-sm font-medium ${PRIORITY_BADGE_CLASSES[key]}`}>
                       {PRIORITY_LABELS[key]}
                     </span>
-                    <span className="text-lg font-bold text-gray-900">{priorityCounts[key]}</span>
+                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{priorityCounts[key]}</span>
                   </li>
                 ))}
               </ul>
@@ -178,22 +186,22 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             {upcomingTasks.length === 0 ? (
-              <p className="text-gray-600 text-sm">Không có task nào sắp đến hạn.</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Không có task nào sắp đến hạn.</p>
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                 {upcomingTasks.map((task) => (
                   <li key={task.id} className="flex items-center justify-between py-3">
                     <div>
-                      <p className="font-medium text-gray-900">{task.title}</p>
-                      <p className="text-sm text-gray-500">{task.projectName}</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{task.title}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{task.projectName}</p>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-sm font-semibold text-gray-700">
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                         {task.dueDate ? formatDueDate(task.dueDate) : ''}
                       </span>
                       <Link
                         href={`/projects/${task.projectId}`}
-                        className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         Xem dự án
                         <ArrowRight className="h-4 w-4" />

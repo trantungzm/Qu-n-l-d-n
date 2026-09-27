@@ -92,12 +92,12 @@ export function EditTaskDialog({
         className="fixed inset-0 bg-black/50"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative z-50 bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
+      <div className="relative z-50 bg-white text-gray-900 rounded-lg shadow-lg p-6 w-full max-w-md mx-4 dark:bg-gray-800 dark:text-gray-100">
         <div className="flex flex-col space-y-1.5 text-center sm:text-left mb-4">
           <h2 className="text-lg font-semibold leading-none tracking-tight">
             Sửa task
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Cập nhật tiêu đề, hạn hoàn thành và mức độ ưu tiên của task
           </p>
         </div>
@@ -106,7 +106,7 @@ export function EditTaskDialog({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <label htmlFor="edit-title" className="text-sm font-medium">
-                Tiêu đề task <span className="text-red-500">*</span>
+                Tiêu đề task <span className="text-red-500 dark:text-red-400">*</span>
               </label>
               <Input
                 id="edit-title"
