@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { normalizeTaskStatus } from '@/lib/task-status';
 import { normalizeTaskPriority } from '@/lib/task-priority';
+import { normalizeTaskType } from '@/lib/task-type';
 
 export async function GET(
   request: Request,
@@ -29,7 +30,7 @@ export async function POST(
 ) {
   try {
     const body = await request.json();
-    const { title, status, dueDate, priority } = body;
+    const { title, status, dueDate, priority, type } = body;
 
     if (!title || typeof title !== 'string' || !title.trim()) {
       return NextResponse.json(
@@ -64,6 +65,7 @@ export async function POST(
         projectId: params.id,
         status: taskStatus,
         priority: normalizeTaskPriority(priority),
+        type: normalizeTaskType(type),
         dueDate: parsedDueDate,
         order,
       },

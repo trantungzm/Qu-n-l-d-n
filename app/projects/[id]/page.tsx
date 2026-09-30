@@ -39,6 +39,14 @@ import {
   PRIORITY_LABELS,
   TASK_PRIORITIES,
 } from '@/lib/task-priority';
+import {
+  filterTasksByType,
+  normalizeTaskType,
+  TASK_TYPES,
+  TYPE_ICON_CLASSES,
+  TYPE_ICONS,
+  TYPE_LABELS,
+} from '@/lib/task-type';
 import { getProjectProgress, countOverdueTasks, countOpenTasksByPriority } from '@/lib/dashboard-stats';
 import { TaskDetailDialog, type SubTask } from '@/components/task-detail-dialog';
 
@@ -50,6 +58,7 @@ interface Task {
   createdAt: string;
   dueDate?: string | null;
   priority: string;
+  type: string;
   order: number;
   subTasks: SubTask[];
 }
@@ -138,13 +147,24 @@ function TaskCard({
           </Button>
         </div>
 
-        <span
-          className={`mt-2 inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${
-            PRIORITY_BADGE_CLASSES[normalizeTaskPriority(task.priority)]
-          }`}
-        >
-          {PRIORITY_LABELS[normalizeTaskPriority(task.priority)]}
-        </span>
+        <div className="mt-2 flex items-center gap-1.5">
+          {(() => {
+            const TypeIcon = TYPE_ICONS[normalizeTaskType(task.type)];
+            return (
+              <TypeIcon
+                className={`h-3.5 w-3.5 shrink-0 ${TYPE_ICON_CLASSES[normalizeTaskType(task.type)]}`}
+                aria-label={TYPE_LABELS[normalizeTaskType(task.type)]}
+              />
+            );
+          })()}
+          <span
+            className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${
+              PRIORITY_BADGE_CLASSES[normalizeTaskPriority(task.priority)]
+            }`}
+          >
+            {PRIORITY_LABELS[normalizeTaskPriority(task.priority)]}
+          </span>
+        </div>
 
         {task.dueDate && (
           <p
@@ -232,9 +252,13 @@ export default function ProjectDetailPage() {
   const [reorderError, setReorderError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
-  const filteredTasks = filterTasksByPriority(filterTasksByTitle(tasks, searchQuery), priorityFilter);
+  const filteredTasks = filterTasksByType(
+    filterTasksByPriority(filterTasksByTitle(tasks, searchQuery), priorityFilter),
+    typeFilter
+  );
 
   const progress = getProjectProgress(tasks);
   const overdueCount = countOverdueTasks(tasks);
@@ -524,6 +548,20 @@ export default function ProjectDetailPage() {
               </option>
             ))}
           </Select>
+
+          <Select
+            value={typeFilter}
+            onChange={(event) => setTypeFilter(event.target.value)}
+            aria-label="Lọc theo loại công việc"
+            className="sm:w-48"
+          >
+            <option value="all">Tất cả loại công việc</option>
+            {TASK_TYPES.map((value) => (
+              <option key={value} value={value}>
+                {TYPE_LABELS[value]}
+              </option>
+            ))}
+          </Select>
         </div>
 
         {reorderError && (
@@ -545,7 +583,9 @@ export default function ProjectDetailPage() {
                 onDelete={handleDeleteTask}
                 onEdit={setEditingTask}
                 onOpenDetail={setViewingTask}
-                isFiltering={Boolean(searchQuery.trim()) || priorityFilter !== 'all'}
+                isFiltering={
+                  Boolean(searchQuery.trim()) || priorityFilter !== 'all' || typeFilter !== 'all'
+                }
               />
             ))}
           </div>

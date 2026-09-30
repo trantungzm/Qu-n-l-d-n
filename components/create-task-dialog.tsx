@@ -7,6 +7,7 @@ import { Select } from '@/components/ui/select';
 import { Alert } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { PRIORITY_LABELS, TASK_PRIORITIES, type TaskPriority } from '@/lib/task-priority';
+import { TASK_TYPES, TYPE_ICON_CLASSES, TYPE_ICONS, TYPE_LABELS, type TaskType } from '@/lib/task-type';
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -24,8 +25,11 @@ export function CreateTaskDialog({
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('medium');
+  const [type, setType] = useState<TaskType>('feature');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+
+  const TypeIcon = TYPE_ICONS[type];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +43,7 @@ export function CreateTaskDialog({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title, status: 'todo', dueDate: dueDate || null, priority }),
+        body: JSON.stringify({ title, status: 'todo', dueDate: dueDate || null, priority, type }),
       });
 
       if (response.ok) {
@@ -48,6 +52,7 @@ export function CreateTaskDialog({
         setTitle('');
         setDueDate('');
         setPriority('medium');
+        setType('feature');
       } else {
         setError(true);
       }
@@ -117,6 +122,26 @@ export function CreateTaskDialog({
                   </option>
                 ))}
               </Select>
+            </div>
+            <div className="grid gap-2">
+              <label htmlFor="type" className="text-sm font-medium">
+                Loại công việc
+              </label>
+              <div className="flex items-center gap-2">
+                <TypeIcon className={`h-4 w-4 shrink-0 ${TYPE_ICON_CLASSES[type]}`} />
+                <Select
+                  id="type"
+                  value={type}
+                  onChange={(e) => setType(e.target.value as TaskType)}
+                  className="flex-1"
+                >
+                  {TASK_TYPES.map((value) => (
+                    <option key={value} value={value}>
+                      {TYPE_LABELS[value]}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
           </div>
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-4">
