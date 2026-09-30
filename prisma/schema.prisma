@@ -25,6 +25,7 @@ model Task {
   title     String
   status    String    @default("todo")
   priority  String    @default("medium")
+  type      String    @default("feature")
   order     Int       @default(0)
   dueDate   DateTime?
   projectId String
