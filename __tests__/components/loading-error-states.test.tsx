@@ -107,6 +107,7 @@ describe('loading and error recovery', () => {
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => [project] })
       .mockResolvedValueOnce({ ok: true, json: async () => [task] })
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
       .mockResolvedValueOnce({ ok: false, json: async () => ({}) });
     global.fetch = fetchMock as typeof fetch;
 
@@ -129,7 +130,7 @@ describe('loading and error recovery', () => {
     });
     expect(screen.getByText('Không lưu được thứ tự task, task đã được khôi phục')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenNthCalledWith(
-      3,
+      4,
       '/api/tasks/reorder',
       expect.objectContaining({
         method: 'POST',
@@ -165,6 +166,7 @@ describe('loading and error recovery', () => {
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => [project] })
       .mockResolvedValueOnce({ ok: true, json: async () => [taskA, taskB] })
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
       .mockResolvedValueOnce({ ok: false, json: async () => ({}) });
     global.fetch = fetchMock as typeof fetch;
 
@@ -186,7 +188,7 @@ describe('loading and error recovery', () => {
     });
     expect(screen.getByText('Không lưu được thứ tự task, task đã được khôi phục')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenNthCalledWith(
-      3,
+      4,
       '/api/tasks/reorder',
       expect.objectContaining({ method: 'POST' }),
     );
