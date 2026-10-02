@@ -49,6 +49,7 @@ import {
 } from '@/lib/task-type';
 import { getProjectProgress, countOverdueTasks, countOpenTasksByPriority } from '@/lib/dashboard-stats';
 import { TaskDetailDialog, type SubTask } from '@/components/task-detail-dialog';
+import { ColumnManager, type ProjectColumn } from '@/components/column-manager';
 
 interface Task {
   id: string;
@@ -60,6 +61,7 @@ interface Task {
   priority: string;
   type: string;
   order: number;
+  columnId?: string | null;
   subTasks: SubTask[];
 }
 
@@ -244,6 +246,7 @@ export default function ProjectDetailPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [columns, setColumns] = useState<ProjectColumn[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
@@ -292,6 +295,17 @@ export default function ProjectDetailPage() {
       setError(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchColumns = async () => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/columns`);
+      const data = await response.json();
+      if (!response.ok) throw new Error('Failed to load columns');
+      setColumns(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Failed to fetch columns:', error);
     }
   };
 
@@ -389,9 +403,21 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const taskCountByColumnId = tasks.reduce<Record<string, number>>((counts, task) => {
+    if (task.columnId) {
+      counts[task.columnId] = (counts[task.columnId] ?? 0) + 1;
+    }
+    return counts;
+  }, {});
+
+  const handleColumnDeleted = (columnId: string) => {
+    setTasks((currentTasks) => currentTasks.filter((task) => task.columnId !== columnId));
+  };
+
   useEffect(() => {
     fetchProject();
     fetchTasks();
+    fetchColumns();
   }, [projectId]);
 
   if (loading) {
@@ -590,6 +616,14 @@ export default function ProjectDetailPage() {
             ))}
           </div>
         </DndContext>
+
+        <ColumnManager
+          projectId={projectId}
+          columns={columns}
+          onColumnsChanged={setColumns}
+          onColumnDeleted={handleColumnDeleted}
+          taskCountByColumnId={taskCountByColumnId}
+        />
 
         <CreateTaskDialog
           open={isDialogOpen}
