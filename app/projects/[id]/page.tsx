@@ -19,11 +19,10 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Plus, Trash2, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Pencil, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { CreateTaskDialog } from '@/components/create-task-dialog';
 import { EditTaskDialog } from '@/components/edit-task-dialog';
 import { ProjectProgressBar } from '@/components/project-progress-bar';
-import { TASK_STATUSES, isTaskStatus, type TaskStatus } from '@/lib/task-status';
 import { reorderTasksOnDrop } from '@/lib/task-order';
 import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -49,19 +48,20 @@ import {
 } from '@/lib/task-type';
 import { getProjectProgress, countOverdueTasks, countOpenTasksByPriority } from '@/lib/dashboard-stats';
 import { TaskDetailDialog, type SubTask } from '@/components/task-detail-dialog';
-import { ColumnManager, type ProjectColumn } from '@/components/column-manager';
+import { ColumnMenu, AddColumnTile, type ProjectColumn } from '@/components/column-manager';
+import { COLUMN_COLOR_CHIP_CLASSES, normalizeColumnColor } from '@/lib/column';
 
 interface Task {
   id: string;
   title: string;
-  status: TaskStatus;
+  status: string;
   projectId: string;
   createdAt: string;
   dueDate?: string | null;
   priority: string;
   type: string;
   order: number;
-  columnId?: string | null;
+  columnId: string | null;
   subTasks: SubTask[];
 }
 
@@ -71,18 +71,6 @@ interface Project {
   description: string | null;
   createdAt: string;
 }
-
-const statusLabels: Record<TaskStatus, string> = {
-  todo: 'Todo',
-  doing: 'Doing',
-  done: 'Done',
-};
-
-const columnStyles: Record<TaskStatus, string> = {
-  todo: 'border-sky-200 bg-sky-50 dark:border-sky-900 dark:bg-sky-950/40',
-  doing: 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40',
-  done: 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40',
-};
 
 function TaskCard({
   task,
@@ -185,35 +173,88 @@ function TaskCard({
 }
 
 function TaskColumn({
-  status,
+  column,
+  index,
+  columnsLength,
   tasks,
+  taskCount,
+  movingColumnId,
+  onMove,
+  onColumnUpdated,
+  onColumnDeleted,
   onDelete,
   onEdit,
   onOpenDetail,
   isFiltering,
 }: {
-  status: TaskStatus;
+  column: ProjectColumn;
+  index: number;
+  columnsLength: number;
   tasks: Task[];
+  taskCount: number;
+  movingColumnId: string | null;
+  onMove: (columnId: string, direction: 'left' | 'right') => void;
+  onColumnUpdated: (column: ProjectColumn) => void;
+  onColumnDeleted: (columnId: string) => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
   onOpenDetail: (task: Task) => void;
   isFiltering: boolean;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: status });
+  const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const sortedTasks = [...tasks].sort((a, b) => a.order - b.order);
 
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-xl border-2 p-4 min-h-[420px] ${columnStyles[status]} ${
+      className={`w-80 shrink-0 rounded-xl border-2 border-gray-200 bg-white p-4 min-h-[420px] dark:border-gray-700 dark:bg-gray-800 ${
         isOver ? 'ring-2 ring-blue-300 ring-offset-1' : ''
       }`}
     >
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{statusLabels[status]}</h3>
-        <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-          {sortedTasks.length}
-        </span>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Chuyển cột ${column.name} sang trái`}
+            onClick={() => onMove(column.id, 'left')}
+            disabled={index === 0 || movingColumnId !== null}
+            className="h-7 w-7"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-medium ${
+              COLUMN_COLOR_CHIP_CLASSES[normalizeColumnColor(column.color)]
+            }`}
+          >
+            {column.name}
+            {column.isDoneColumn && <CheckCircle2 className="h-3.5 w-3.5" />}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Chuyển cột ${column.name} sang phải`}
+            onClick={() => onMove(column.id, 'right')}
+            disabled={index === columnsLength - 1 || movingColumnId !== null}
+            className="h-7 w-7"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+            {sortedTasks.length}
+          </span>
+          <ColumnMenu
+            column={column}
+            taskCount={taskCount}
+            onUpdated={onColumnUpdated}
+            onDeleted={onColumnDeleted}
+          />
+        </div>
       </div>
 
       <SortableContext items={sortedTasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
@@ -256,6 +297,7 @@ export default function ProjectDetailPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [movingColumnId, setMovingColumnId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const filteredTasks = filterTasksByType(
@@ -266,6 +308,14 @@ export default function ProjectDetailPage() {
   const progress = getProjectProgress(tasks);
   const overdueCount = countOverdueTasks(tasks);
   const openPriorityCounts = countOpenTasksByPriority(tasks);
+
+  const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
+  const taskCountByColumnId = tasks.reduce<Record<string, number>>((counts, task) => {
+    if (task.columnId) {
+      counts[task.columnId] = (counts[task.columnId] ?? 0) + 1;
+    }
+    return counts;
+  }, {});
 
   const fetchProject = async () => {
     try {
@@ -306,6 +356,39 @@ export default function ProjectDetailPage() {
       setColumns(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch columns:', error);
+    }
+  };
+
+  const handleColumnCreated = (newColumn: ProjectColumn) => {
+    setColumns((currentColumns) => [...currentColumns, newColumn]);
+  };
+
+  const handleColumnUpdated = (updatedColumn: ProjectColumn) => {
+    setColumns((currentColumns) =>
+      currentColumns.map((column) => (column.id === updatedColumn.id ? updatedColumn : column))
+    );
+  };
+
+  const handleColumnDeleted = (columnId: string) => {
+    setColumns((currentColumns) => currentColumns.filter((column) => column.id !== columnId));
+    setTasks((currentTasks) => currentTasks.filter((task) => task.columnId !== columnId));
+  };
+
+  const handleMoveColumn = async (columnId: string, direction: 'left' | 'right') => {
+    setMovingColumnId(columnId);
+    try {
+      const response = await fetch(`/api/columns/${columnId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direction }),
+      });
+      if (response.ok) {
+        await fetchColumns();
+      }
+    } catch (error) {
+      console.error('Failed to reorder column:', error);
+    } finally {
+      setMovingColumnId(null);
     }
   };
 
@@ -355,22 +438,22 @@ export default function ProjectDetailPage() {
     const draggedTask = tasks.find((task) => task.id === draggedTaskId);
     if (!draggedTask) return;
 
-    let targetStatus: TaskStatus;
-    if (isTaskStatus(overId)) {
-      targetStatus = overId;
+    let targetColumnId: string | null;
+    if (columns.some((column) => column.id === overId)) {
+      targetColumnId = overId;
     } else {
       const overTask = tasks.find((task) => task.id === overId);
       if (!overTask) return;
-      targetStatus = overTask.status;
+      targetColumnId = overTask.columnId;
     }
 
     const destTasksExcludingActive = tasks
-      .filter((task) => task.status === targetStatus && task.id !== draggedTaskId)
+      .filter((task) => task.columnId === targetColumnId && task.id !== draggedTaskId)
       .sort((a, b) => a.order - b.order);
     const overIndex = destTasksExcludingActive.findIndex((task) => task.id === overId);
     const targetIndex = overIndex === -1 ? destTasksExcludingActive.length : overIndex;
 
-    const updates = reorderTasksOnDrop(tasks, draggedTaskId, targetStatus, targetIndex);
+    const updates = reorderTasksOnDrop(tasks, draggedTaskId, targetColumnId, targetIndex);
     if (updates.length === 0) return;
 
     const prevTasks = tasks;
@@ -378,7 +461,7 @@ export default function ProjectDetailPage() {
     setTasks((currentTasks) =>
       currentTasks.map((task) => {
         const update = updatesById.get(task.id);
-        return update ? { ...task, status: update.status as TaskStatus, order: update.order } : task;
+        return update ? { ...task, columnId: update.columnId, order: update.order } : task;
       })
     );
 
@@ -403,17 +486,6 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const taskCountByColumnId = tasks.reduce<Record<string, number>>((counts, task) => {
-    if (task.columnId) {
-      counts[task.columnId] = (counts[task.columnId] ?? 0) + 1;
-    }
-    return counts;
-  }, {});
-
-  const handleColumnDeleted = (columnId: string) => {
-    setTasks((currentTasks) => currentTasks.filter((task) => task.columnId !== columnId));
-  };
-
   useEffect(() => {
     fetchProject();
     fetchTasks();
@@ -427,9 +499,9 @@ export default function ProjectDetailPage() {
           <Skeleton className="mb-4 h-9 w-24" />
           <Skeleton className="mb-3 h-10 w-2/3" />
           <Skeleton className="mb-8 h-5 w-1/2" />
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3" aria-label="Đang tải task">
-            {TASK_STATUSES.map((status) => (
-              <div key={status} className="min-h-[420px] rounded-xl border-2 border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex gap-4 overflow-x-auto" aria-label="Đang tải task">
+            {[0, 1, 2].map((placeholder) => (
+              <div key={placeholder} className="w-80 shrink-0 min-h-[420px] rounded-xl border-2 border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                 <div className="mb-6 flex justify-between">
                   <Skeleton className="h-6 w-24" />
                   <Skeleton className="h-6 w-8 rounded-full" />
@@ -600,12 +672,19 @@ export default function ProjectDetailPage() {
         )}
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            {TASK_STATUSES.map((status) => (
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {sortedColumns.map((column, index) => (
               <TaskColumn
-                key={status}
-                status={status}
-                tasks={filteredTasks.filter((task) => task.status === status)}
+                key={column.id}
+                column={column}
+                index={index}
+                columnsLength={sortedColumns.length}
+                tasks={filteredTasks.filter((task) => task.columnId === column.id)}
+                taskCount={taskCountByColumnId[column.id] ?? 0}
+                movingColumnId={movingColumnId}
+                onMove={handleMoveColumn}
+                onColumnUpdated={handleColumnUpdated}
+                onColumnDeleted={handleColumnDeleted}
                 onDelete={handleDeleteTask}
                 onEdit={setEditingTask}
                 onOpenDetail={setViewingTask}
@@ -614,16 +693,9 @@ export default function ProjectDetailPage() {
                 }
               />
             ))}
+            <AddColumnTile projectId={projectId} onCreated={handleColumnCreated} />
           </div>
         </DndContext>
-
-        <ColumnManager
-          projectId={projectId}
-          columns={columns}
-          onColumnsChanged={setColumns}
-          onColumnDeleted={handleColumnDeleted}
-          taskCountByColumnId={taskCountByColumnId}
-        />
 
         <CreateTaskDialog
           open={isDialogOpen}

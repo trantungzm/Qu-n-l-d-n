@@ -88,13 +88,17 @@ describe('loading and error recovery', () => {
     ).toHaveLength(2);
   });
 
-  it('rolls a task back to its original column when status update fails', async () => {
+  it('rolls a task back to its original column when the reorder request fails', async () => {
     const project = {
       id: 'project-1',
       name: 'Project',
       description: null,
       createdAt: '2026-08-28T00:00:00.000Z',
     };
+    const columns = [
+      { id: 'col-todo', name: 'Todo', color: 'blue', order: 0, isDoneColumn: false, projectId: 'project-1' },
+      { id: 'col-doing', name: 'Doing', color: 'amber', order: 1, isDoneColumn: false, projectId: 'project-1' },
+    ];
     const task = {
       id: 'task-1',
       title: 'Rollback me',
@@ -102,26 +106,27 @@ describe('loading and error recovery', () => {
       projectId: 'project-1',
       createdAt: '2026-08-28T00:00:00.000Z',
       order: 0,
+      columnId: 'col-todo',
     };
     const fetchMock = jest
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => [project] })
       .mockResolvedValueOnce({ ok: true, json: async () => [task] })
-      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({ ok: true, json: async () => columns })
       .mockResolvedValueOnce({ ok: false, json: async () => ({}) });
     global.fetch = fetchMock as typeof fetch;
 
     render(<ProjectDetailPage />);
     await screen.findByText('Rollback me');
 
-    const todoColumn = screen.getByRole('heading', { name: 'Todo' }).parentElement?.parentElement;
-    const doingColumn = screen.getByRole('heading', { name: 'Doing' }).parentElement?.parentElement;
+    const todoColumn = screen.getByText('Todo').closest('div.w-80');
+    const doingColumn = screen.getByText('Doing').closest('div.w-80');
     expect(todoColumn).toBeTruthy();
     expect(doingColumn).toBeTruthy();
     expect(within(todoColumn as HTMLElement).getByText('Rollback me')).toBeInTheDocument();
 
     await act(async () => {
-      await dragEndHandler?.({ active: { id: 'task-1' }, over: { id: 'doing' } });
+      await dragEndHandler?.({ active: { id: 'task-1' }, over: { id: 'col-doing' } });
     });
 
     await waitFor(() => {
@@ -134,7 +139,7 @@ describe('loading and error recovery', () => {
       '/api/tasks/reorder',
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ updates: [{ id: 'task-1', status: 'doing', order: 0 }] }),
+        body: JSON.stringify({ updates: [{ id: 'task-1', columnId: 'col-doing', order: 0 }] }),
       }),
     );
   });
@@ -146,6 +151,9 @@ describe('loading and error recovery', () => {
       description: null,
       createdAt: '2026-08-28T00:00:00.000Z',
     };
+    const columns = [
+      { id: 'col-todo', name: 'Todo', color: 'blue', order: 0, isDoneColumn: false, projectId: 'project-1' },
+    ];
     const taskA = {
       id: 'task-a',
       title: 'Task A',
@@ -153,6 +161,7 @@ describe('loading and error recovery', () => {
       projectId: 'project-1',
       createdAt: '2026-08-28T00:00:00.000Z',
       order: 0,
+      columnId: 'col-todo',
     };
     const taskB = {
       id: 'task-b',
@@ -161,19 +170,20 @@ describe('loading and error recovery', () => {
       projectId: 'project-1',
       createdAt: '2026-08-29T00:00:00.000Z',
       order: 1,
+      columnId: 'col-todo',
     };
     const fetchMock = jest
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => [project] })
       .mockResolvedValueOnce({ ok: true, json: async () => [taskA, taskB] })
-      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({ ok: true, json: async () => columns })
       .mockResolvedValueOnce({ ok: false, json: async () => ({}) });
     global.fetch = fetchMock as typeof fetch;
 
     render(<ProjectDetailPage />);
     await screen.findByText('Task A');
 
-    const todoColumn = screen.getByRole('heading', { name: 'Todo' }).parentElement?.parentElement as HTMLElement;
+    const todoColumn = screen.getByText('Todo').closest('div.w-80') as HTMLElement;
     const titlesBefore = within(todoColumn).getAllByText(/^Task [AB]$/).map((el) => el.textContent);
     expect(titlesBefore).toEqual(['Task A', 'Task B']);
 

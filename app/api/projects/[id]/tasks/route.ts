@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { normalizeTaskStatus } from '@/lib/task-status';
 import { normalizeTaskPriority } from '@/lib/task-priority';
 import { normalizeTaskType } from '@/lib/task-type';
 
@@ -30,7 +29,7 @@ export async function POST(
 ) {
   try {
     const body = await request.json();
-    const { title, status, dueDate, priority, type } = body;
+    const { title, columnId, dueDate, priority, type } = body;
 
     if (!title || typeof title !== 'string' || !title.trim()) {
       return NextResponse.json(
@@ -51,19 +50,29 @@ export async function POST(
       parsedDueDate = candidate;
     }
 
-    const taskStatus = normalizeTaskStatus(status);
-    const topTask = await prisma.task.findFirst({
-      where: { projectId: params.id, status: taskStatus },
-      orderBy: { order: 'asc' },
-      select: { order: true },
-    });
+    const targetColumn = columnId
+      ? await prisma.column.findUnique({ where: { id: columnId }, select: { id: true, isDoneColumn: true } })
+      : await prisma.column.findFirst({
+          where: { projectId: params.id },
+          orderBy: { order: 'asc' },
+          select: { id: true, isDoneColumn: true },
+        });
+
+    const topTask = targetColumn
+      ? await prisma.task.findFirst({
+          where: { projectId: params.id, columnId: targetColumn.id },
+          orderBy: { order: 'asc' },
+          select: { order: true },
+        })
+      : null;
     const order = topTask ? topTask.order - 1 : 0;
 
     const task = await prisma.task.create({
       data: {
         title: title.trim(),
         projectId: params.id,
-        status: taskStatus,
+        columnId: targetColumn?.id ?? null,
+        status: targetColumn?.isDoneColumn ? 'done' : 'todo',
         priority: normalizeTaskPriority(priority),
         type: normalizeTaskType(type),
         dueDate: parsedDueDate,
