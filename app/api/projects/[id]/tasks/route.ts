@@ -51,11 +51,11 @@ export async function POST(
     }
 
     const targetColumn = columnId
-      ? await prisma.column.findUnique({ where: { id: columnId }, select: { id: true, isDoneColumn: true } })
+      ? await prisma.column.findUnique({ where: { id: columnId }, select: { id: true } })
       : await prisma.column.findFirst({
           where: { projectId: params.id },
           orderBy: { order: 'asc' },
-          select: { id: true, isDoneColumn: true },
+          select: { id: true },
         });
 
     const topTask = targetColumn
@@ -72,7 +72,6 @@ export async function POST(
         title: title.trim(),
         projectId: params.id,
         columnId: targetColumn?.id ?? null,
-        status: targetColumn?.isDoneColumn ? 'done' : 'todo',
         priority: normalizeTaskPriority(priority),
         type: normalizeTaskType(type),
         dueDate: parsedDueDate,
