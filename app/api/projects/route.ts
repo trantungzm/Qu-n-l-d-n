@@ -8,13 +8,15 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
       include: {
         _count: { select: { tasks: true } },
-        tasks: { select: { status: true } },
+        tasks: { select: { column: { select: { isDoneColumn: true } } } },
       },
     });
 
     const projectsWithProgress = projects.map(({ tasks, ...project }) => ({
       ...project,
-      progress: getProjectProgress(tasks),
+      progress: getProjectProgress(
+        tasks.map((task) => ({ isDoneColumn: task.column?.isDoneColumn === true }))
+      ),
     }));
 
     return NextResponse.json(projectsWithProgress);

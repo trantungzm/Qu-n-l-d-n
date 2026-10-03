@@ -1,11 +1,13 @@
 import { prisma } from '@/lib/prisma';
 import { PATCH } from '@/app/api/projects/[id]/route';
+import { GET } from '@/app/api/projects/route';
 
 // Mock Prisma client
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     project: {
       update: jest.fn(),
+      findMany: jest.fn(),
     },
   },
 }));
@@ -13,6 +15,31 @@ jest.mock('@/lib/prisma', () => ({
 describe('Project API Routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('GET /api/projects (progress via Column.isDoneColumn)', () => {
+    it('computes progress from each task\'s column isDoneColumn flag, not Task.status', async () => {
+      (prisma.project.findMany as jest.Mock).mockResolvedValue([
+        {
+          id: 'project-1',
+          name: 'Project 1',
+          description: null,
+          createdAt: new Date().toISOString(),
+          _count: { tasks: 3 },
+          tasks: [
+            { column: { isDoneColumn: true } },
+            { column: { isDoneColumn: false } },
+            { column: null },
+          ],
+        },
+      ]);
+
+      const response = await GET();
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body[0].progress).toEqual({ done: 1, total: 3, percent: 33 });
+    });
   });
 
   describe('PATCH /api/projects/[id]', () => {

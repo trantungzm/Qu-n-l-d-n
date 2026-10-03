@@ -1,9 +1,9 @@
 export function isTaskOverdue(
   dueDate: string | Date | null | undefined,
-  status: string,
+  isDoneColumn: boolean,
   now: Date = new Date()
 ): boolean {
-  if (!dueDate || status === 'done') return false;
+  if (!dueDate || isDoneColumn) return false;
 
   const due = typeof dueDate === 'string' ? new Date(dueDate) : dueDate;
   if (Number.isNaN(due.getTime())) return false;
@@ -16,10 +16,10 @@ export function isTaskOverdue(
 
 export function isTaskDueSoon(
   dueDate: string | Date | null | undefined,
-  status: string,
+  isDoneColumn: boolean,
   now: Date = new Date()
 ): boolean {
-  if (!dueDate || status === 'done') return false;
+  if (!dueDate || isDoneColumn) return false;
 
   const due = typeof dueDate === 'string' ? new Date(dueDate) : dueDate;
   if (Number.isNaN(due.getTime())) return false;

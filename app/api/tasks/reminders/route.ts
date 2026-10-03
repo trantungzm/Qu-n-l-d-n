@@ -7,10 +7,15 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const tasks = await prisma.task.findMany({
-      select: { status: true, dueDate: true },
+      select: { dueDate: true, column: { select: { isDoneColumn: true } } },
     });
 
-    return NextResponse.json({ count: countReminderTasks(tasks) });
+    const reminderTasks = tasks.map((task) => ({
+      isDoneColumn: task.column?.isDoneColumn === true,
+      dueDate: task.dueDate,
+    }));
+
+    return NextResponse.json({ count: countReminderTasks(reminderTasks) });
   } catch (error) {
     console.error('Error fetching task reminders:', error);
     return NextResponse.json(

@@ -1,5 +1,5 @@
 import {
-  countTasksByStatus,
+  countTasksByDoneStatus,
   countOverdueTasks,
   countDueSoonTasks,
   countReminderTasks,
@@ -13,7 +13,7 @@ function makeTask(overrides: Partial<DashboardTask>): DashboardTask {
   return {
     id: 'task-1',
     title: 'Task',
-    status: 'todo',
+    isDoneColumn: false,
     priority: 'medium',
     dueDate: null,
     projectId: 'project-1',
@@ -22,53 +22,53 @@ function makeTask(overrides: Partial<DashboardTask>): DashboardTask {
   };
 }
 
-describe('countTasksByStatus', () => {
-  it('counts tasks grouped by status', () => {
+describe('countTasksByDoneStatus', () => {
+  it('counts tasks grouped by done vs open', () => {
     const tasks = [
-      makeTask({ id: '1', status: 'todo' }),
-      makeTask({ id: '2', status: 'todo' }),
-      makeTask({ id: '3', status: 'doing' }),
-      makeTask({ id: '4', status: 'done' }),
+      makeTask({ id: '1', isDoneColumn: false }),
+      makeTask({ id: '2', isDoneColumn: false }),
+      makeTask({ id: '3', isDoneColumn: false }),
+      makeTask({ id: '4', isDoneColumn: true }),
     ];
 
-    expect(countTasksByStatus(tasks)).toEqual({ todo: 2, doing: 1, done: 1 });
-  });
-
-  it('normalizes unknown status values to todo', () => {
-    const tasks = [makeTask({ status: 'unknown' })];
-    expect(countTasksByStatus(tasks)).toEqual({ todo: 1, doing: 0, done: 0 });
+    expect(countTasksByDoneStatus(tasks)).toEqual({ done: 1, open: 3 });
   });
 
   it('returns all zeros for an empty list', () => {
-    expect(countTasksByStatus([])).toEqual({ todo: 0, doing: 0, done: 0 });
+    expect(countTasksByDoneStatus([])).toEqual({ done: 0, open: 0 });
   });
 });
 
 describe('countOverdueTasks', () => {
   const today = new Date('2026-09-15T12:00:00.000Z');
 
-  it('counts tasks whose due date is strictly before today and not done', () => {
+  it('counts tasks whose due date is strictly before today and not in a done column', () => {
     const tasks = [
-      makeTask({ id: '1', dueDate: '2026-09-01', status: 'todo' }),
-      makeTask({ id: '2', dueDate: '2026-09-14', status: 'doing' }),
-      makeTask({ id: '3', dueDate: '2026-09-20', status: 'todo' }),
+      makeTask({ id: '1', dueDate: '2026-09-01', isDoneColumn: false }),
+      makeTask({ id: '2', dueDate: '2026-09-14', isDoneColumn: false }),
+      makeTask({ id: '3', dueDate: '2026-09-20', isDoneColumn: false }),
     ];
 
     expect(countOverdueTasks(tasks, today)).toBe(2);
   });
 
   it('does not count a task due exactly today as overdue', () => {
-    const tasks = [makeTask({ dueDate: '2026-09-15', status: 'todo' })];
+    const tasks = [makeTask({ dueDate: '2026-09-15', isDoneColumn: false })];
     expect(countOverdueTasks(tasks, today)).toBe(0);
   });
 
-  it('does not count a done task as overdue even if its due date has passed', () => {
-    const tasks = [makeTask({ dueDate: '2026-09-01', status: 'done' })];
+  it('does not count a task in a done column as overdue even if its due date has passed', () => {
+    const tasks = [makeTask({ dueDate: '2026-09-01', isDoneColumn: true })];
     expect(countOverdueTasks(tasks, today)).toBe(0);
+  });
+
+  it('counts a task in a custom non-done column (e.g. "Review") as overdue when its due date has passed', () => {
+    const tasks = [makeTask({ dueDate: '2026-09-01', isDoneColumn: false })];
+    expect(countOverdueTasks(tasks, today)).toBe(1);
   });
 
   it('ignores tasks without a due date', () => {
-    const tasks = [makeTask({ dueDate: null, status: 'todo' })];
+    const tasks = [makeTask({ dueDate: null, isDoneColumn: false })];
     expect(countOverdueTasks(tasks, today)).toBe(0);
   });
 
@@ -82,26 +82,26 @@ describe('countDueSoonTasks', () => {
 
   it('counts not-done tasks due today', () => {
     const tasks = [
-      makeTask({ id: '1', dueDate: '2026-09-15', status: 'todo' }),
-      makeTask({ id: '2', dueDate: '2026-09-15', status: 'doing' }),
-      makeTask({ id: '3', dueDate: '2026-09-16', status: 'todo' }),
+      makeTask({ id: '1', dueDate: '2026-09-15', isDoneColumn: false }),
+      makeTask({ id: '2', dueDate: '2026-09-15', isDoneColumn: false }),
+      makeTask({ id: '3', dueDate: '2026-09-16', isDoneColumn: false }),
     ];
 
     expect(countDueSoonTasks(tasks, today)).toBe(2);
   });
 
-  it('excludes a done task due today', () => {
-    const tasks = [makeTask({ dueDate: '2026-09-15', status: 'done' })];
+  it('excludes a task in a done column due today', () => {
+    const tasks = [makeTask({ dueDate: '2026-09-15', isDoneColumn: true })];
     expect(countDueSoonTasks(tasks, today)).toBe(0);
   });
 
   it('excludes an overdue task', () => {
-    const tasks = [makeTask({ dueDate: '2026-09-01', status: 'todo' })];
+    const tasks = [makeTask({ dueDate: '2026-09-01', isDoneColumn: false })];
     expect(countDueSoonTasks(tasks, today)).toBe(0);
   });
 
   it('ignores tasks without a due date', () => {
-    const tasks = [makeTask({ dueDate: null, status: 'todo' })];
+    const tasks = [makeTask({ dueDate: null, isDoneColumn: false })];
     expect(countDueSoonTasks(tasks, today)).toBe(0);
   });
 
@@ -115,17 +115,17 @@ describe('countReminderTasks', () => {
 
   it('sums overdue and due-soon tasks', () => {
     const tasks = [
-      makeTask({ id: '1', dueDate: '2026-09-01', status: 'todo' }), // overdue
-      makeTask({ id: '2', dueDate: '2026-09-15', status: 'todo' }), // due soon
-      makeTask({ id: '3', dueDate: '2026-09-20', status: 'todo' }), // future
-      makeTask({ id: '4', dueDate: '2026-09-01', status: 'done' }), // done, ignored
+      makeTask({ id: '1', dueDate: '2026-09-01', isDoneColumn: false }), // overdue
+      makeTask({ id: '2', dueDate: '2026-09-15', isDoneColumn: false }), // due soon
+      makeTask({ id: '3', dueDate: '2026-09-20', isDoneColumn: false }), // future
+      makeTask({ id: '4', dueDate: '2026-09-01', isDoneColumn: true }), // done, ignored
     ];
 
     expect(countReminderTasks(tasks, today)).toBe(2);
   });
 
   it('returns 0 when there are no overdue or due-soon tasks', () => {
-    const tasks = [makeTask({ dueDate: '2026-09-20', status: 'todo' })];
+    const tasks = [makeTask({ dueDate: '2026-09-20', isDoneColumn: false })];
     expect(countReminderTasks(tasks, today)).toBe(0);
   });
 
@@ -135,29 +135,29 @@ describe('countReminderTasks', () => {
 });
 
 describe('countOpenTasksByPriority', () => {
-  it('counts only non-done tasks grouped by priority', () => {
+  it('counts only tasks not in a done column, grouped by priority', () => {
     const tasks = [
-      makeTask({ id: '1', priority: 'high', status: 'todo' }),
-      makeTask({ id: '2', priority: 'high', status: 'doing' }),
-      makeTask({ id: '3', priority: 'medium', status: 'todo' }),
-      makeTask({ id: '4', priority: 'low', status: 'todo' }),
-      makeTask({ id: '5', priority: 'high', status: 'done' }),
+      makeTask({ id: '1', priority: 'high', isDoneColumn: false }),
+      makeTask({ id: '2', priority: 'high', isDoneColumn: false }),
+      makeTask({ id: '3', priority: 'medium', isDoneColumn: false }),
+      makeTask({ id: '4', priority: 'low', isDoneColumn: false }),
+      makeTask({ id: '5', priority: 'high', isDoneColumn: true }),
     ];
 
     expect(countOpenTasksByPriority(tasks)).toEqual({ low: 1, medium: 1, high: 2 });
   });
 
-  it('excludes done tasks regardless of priority', () => {
+  it('excludes tasks in a done column regardless of priority', () => {
     const tasks = [
-      makeTask({ priority: 'high', status: 'done' }),
-      makeTask({ priority: 'low', status: 'done' }),
+      makeTask({ priority: 'high', isDoneColumn: true }),
+      makeTask({ priority: 'low', isDoneColumn: true }),
     ];
 
     expect(countOpenTasksByPriority(tasks)).toEqual({ low: 0, medium: 0, high: 0 });
   });
 
   it('normalizes unknown priority values to medium', () => {
-    const tasks = [makeTask({ priority: 'urgent', status: 'todo' })];
+    const tasks = [makeTask({ priority: 'urgent', isDoneColumn: false })];
     expect(countOpenTasksByPriority(tasks)).toEqual({ low: 0, medium: 1, high: 0 });
   });
 
@@ -171,9 +171,9 @@ describe('getUpcomingTasks', () => {
 
   it('sorts open tasks with a due date ascending and limits the result', () => {
     const tasks = [
-      makeTask({ id: '1', dueDate: '2026-09-25', status: 'todo' }),
-      makeTask({ id: '2', dueDate: '2026-09-16', status: 'todo' }),
-      makeTask({ id: '3', dueDate: '2026-09-20', status: 'doing' }),
+      makeTask({ id: '1', dueDate: '2026-09-25', isDoneColumn: false }),
+      makeTask({ id: '2', dueDate: '2026-09-16', isDoneColumn: false }),
+      makeTask({ id: '3', dueDate: '2026-09-20', isDoneColumn: false }),
     ];
 
     const result = getUpcomingTasks(tasks, today, 2);
@@ -181,28 +181,28 @@ describe('getUpcomingTasks', () => {
   });
 
   it('includes a task due exactly today', () => {
-    const tasks = [makeTask({ id: '1', dueDate: '2026-09-15', status: 'todo' })];
+    const tasks = [makeTask({ id: '1', dueDate: '2026-09-15', isDoneColumn: false })];
     expect(getUpcomingTasks(tasks, today).map((t) => t.id)).toEqual(['1']);
   });
 
   it('excludes overdue tasks', () => {
-    const tasks = [makeTask({ id: '1', dueDate: '2026-09-01', status: 'todo' })];
+    const tasks = [makeTask({ id: '1', dueDate: '2026-09-01', isDoneColumn: false })];
     expect(getUpcomingTasks(tasks, today)).toEqual([]);
   });
 
-  it('excludes done tasks even with an upcoming due date', () => {
-    const tasks = [makeTask({ id: '1', dueDate: '2026-09-20', status: 'done' })];
+  it('excludes tasks in a done column even with an upcoming due date', () => {
+    const tasks = [makeTask({ id: '1', dueDate: '2026-09-20', isDoneColumn: true })];
     expect(getUpcomingTasks(tasks, today)).toEqual([]);
   });
 
   it('excludes tasks without a due date', () => {
-    const tasks = [makeTask({ id: '1', dueDate: null, status: 'todo' })];
+    const tasks = [makeTask({ id: '1', dueDate: null, isDoneColumn: false })];
     expect(getUpcomingTasks(tasks, today)).toEqual([]);
   });
 
   it('defaults the limit to 5', () => {
     const tasks = Array.from({ length: 8 }, (_, i) =>
-      makeTask({ id: String(i), dueDate: `2026-09-${16 + i}`, status: 'todo' })
+      makeTask({ id: String(i), dueDate: `2026-09-${16 + i}`, isDoneColumn: false })
     );
     expect(getUpcomingTasks(tasks, today)).toHaveLength(5);
   });
@@ -213,10 +213,10 @@ describe('getProjectProgress', () => {
     expect(getProjectProgress([])).toEqual({ done: 0, total: 0, percent: 0 });
   });
 
-  it('returns 100 percent when all tasks are done', () => {
+  it('returns 100 percent when all tasks are in a done column', () => {
     const tasks = [
-      makeTask({ id: '1', status: 'done' }),
-      makeTask({ id: '2', status: 'done' }),
+      makeTask({ id: '1', isDoneColumn: true }),
+      makeTask({ id: '2', isDoneColumn: true }),
     ];
 
     expect(getProjectProgress(tasks)).toEqual({ done: 2, total: 2, percent: 100 });
@@ -224,16 +224,21 @@ describe('getProjectProgress', () => {
 
   it('computes a rounded percentage for a partially completed project', () => {
     const tasks = [
-      makeTask({ id: '1', status: 'done' }),
-      makeTask({ id: '2', status: 'todo' }),
-      makeTask({ id: '3', status: 'doing' }),
+      makeTask({ id: '1', isDoneColumn: true }),
+      makeTask({ id: '2', isDoneColumn: false }),
+      makeTask({ id: '3', isDoneColumn: false }),
     ];
 
     expect(getProjectProgress(tasks)).toEqual({ done: 1, total: 3, percent: 33 });
   });
 
-  it('treats an unknown status as not done', () => {
-    const tasks = [makeTask({ id: '1', status: 'unknown' })];
+  it('treats a task in a custom non-done column as not done', () => {
+    const tasks = [makeTask({ id: '1', isDoneColumn: false })];
     expect(getProjectProgress(tasks)).toEqual({ done: 0, total: 1, percent: 0 });
+  });
+
+  it('treats a task in a custom column marked as the done column as done', () => {
+    const tasks = [makeTask({ id: '1', isDoneColumn: true })];
+    expect(getProjectProgress(tasks)).toEqual({ done: 1, total: 1, percent: 100 });
   });
 });
