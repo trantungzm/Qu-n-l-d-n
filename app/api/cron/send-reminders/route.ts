@@ -24,6 +24,7 @@ export async function GET(request: Request) {
       where: {
         status: { not: 'done' },
         dueDate: { not: null },
+        archivedAt: null,
       },
       select: {
         id: true,

@@ -37,5 +37,9 @@ next-env.d.ts
 prisma/dev.db
 prisma/dev.db-journal
 
+# throwaway sqlite dbs from __tests__/integration/* (best-effort cleanup can
+# fail to unlink a locked file, e.g. on Windows)
+__tests__/integration/.tmp-*.db*
+
 # Sentry Config File
 .env.sentry-build-plugin

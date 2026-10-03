@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const tasks = await prisma.task.findMany({
+      where: { archivedAt: null },
       select: { status: true, dueDate: true },
     });
 

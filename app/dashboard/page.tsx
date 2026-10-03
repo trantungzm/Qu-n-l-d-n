@@ -33,6 +33,7 @@ const PRIORITY_ORDER = ['high', 'medium', 'low'] as const;
 
 async function getDashboardTasks(): Promise<DashboardTask[]> {
   const tasks = await prisma.task.findMany({
+    where: { archivedAt: null },
     select: {
       id: true,
       title: true,

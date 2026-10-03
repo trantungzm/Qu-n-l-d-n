@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const tasks = await prisma.task.findMany({
-      where: { projectId: params.id },
+      where: { projectId: params.id, archivedAt: null },
       orderBy: { order: 'asc' },
       include: { subTasks: { orderBy: { createdAt: 'asc' } } },
     });

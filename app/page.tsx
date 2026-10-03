@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, ArrowRight, Pencil, AlertTriangle, X } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, Pencil, AlertTriangle, X, Archive } from 'lucide-react';
 import { CreateProjectDialog, EditProjectDialog } from '@/components/create-project-dialog';
 import { ProjectProgressBar } from '@/components/project-progress-bar';
 import { Alert } from '@/components/ui/alert';
@@ -77,6 +77,21 @@ export default function Home() {
       console.error('Failed to delete project:', error);
     } finally {
       setDeletingProject(null);
+    }
+  };
+
+  const handleArchive = async (id: string) => {
+    try {
+      const response = await fetch(`/api/projects/${id}/archive`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: true }),
+      });
+      if (response.ok) {
+        setProjects((current) => current.filter((p) => p.id !== id));
+      }
+    } catch (error) {
+      console.error('Failed to archive project:', error);
     }
   };
 
@@ -188,34 +203,45 @@ export default function Home() {
                   {project.progress && (
                     <ProjectProgressBar progress={project.progress} className="mb-4" />
                   )}
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => router.push(`/projects/${project.id}`)}
-                      className="flex-1"
+                      className="w-full"
                     >
                       <ArrowRight className="mr-2 h-4 w-4" />
                       Xem chi tiết
                     </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleEditProject(project)}
-                      className="flex-1"
-                    >
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Sửa
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setDeletingProject(project)}
-                      className="flex-1"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Xóa
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleEditProject(project)}
+                        className="flex-1"
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Sửa
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleArchive(project.id)}
+                        className="flex-1"
+                      >
+                        <Archive className="mr-2 h-4 w-4" />
+                        Lưu trữ
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setDeletingProject(project)}
+                        className="flex-1"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Xóa
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

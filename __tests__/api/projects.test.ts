@@ -1,11 +1,13 @@
 import { prisma } from '@/lib/prisma';
 import { PATCH } from '@/app/api/projects/[id]/route';
+import { GET } from '@/app/api/projects/route';
 
 // Mock Prisma client
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     project: {
       update: jest.fn(),
+      findMany: jest.fn(),
     },
   },
 }));
@@ -13,6 +15,43 @@ jest.mock('@/lib/prisma', () => ({
 describe('Project API Routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('GET /api/projects (archived filtering)', () => {
+    it('defaults to only non-archived projects, and excludes archived tasks from progress', async () => {
+      (prisma.project.findMany as jest.Mock).mockResolvedValue([
+        {
+          id: 'project-1',
+          name: 'Active project',
+          _count: { tasks: 2 },
+          tasks: [{ status: 'done' }],
+        },
+      ]);
+
+      const response = await GET(new Request('http://localhost/api/projects'));
+      const body = await response.json();
+
+      expect(prisma.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { archivedAt: null },
+          include: expect.objectContaining({
+            tasks: { where: { archivedAt: null }, select: { status: true } },
+          }),
+        })
+      );
+      expect(response.status).toBe(200);
+      expect(body[0].progress).toEqual({ done: 1, total: 1, percent: 100 });
+    });
+
+    it('returns only archived projects when ?archived=true', async () => {
+      (prisma.project.findMany as jest.Mock).mockResolvedValue([]);
+
+      await GET(new Request('http://localhost/api/projects?archived=true'));
+
+      expect(prisma.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { archivedAt: { not: null } } })
+      );
+    });
   });
 
   describe('PATCH /api/projects/[id]', () => {

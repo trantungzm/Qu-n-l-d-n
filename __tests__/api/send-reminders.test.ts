@@ -67,6 +67,18 @@ describe('GET /api/cron/send-reminders', () => {
     expect(mockSend).not.toHaveBeenCalled();
   });
 
+  it('queries only non-archived tasks', async () => {
+    (prisma.task.findMany as jest.Mock).mockResolvedValue([]);
+
+    await GET(makeRequest({ authorization: 'Bearer test-secret' }));
+
+    expect(prisma.task.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ archivedAt: null }),
+      })
+    );
+  });
+
   it('sends one combined email listing every due-soon/overdue task when the secret is correct', async () => {
     const today = new Date();
     const overdueDate = new Date(today);
