@@ -23,6 +23,8 @@ export async function GET(request: Request) {
     const tasks = await prisma.task.findMany({
       where: {
         dueDate: { not: null },
+        archivedAt: null,
+        project: { archivedAt: null },
         OR: [{ columnId: null }, { column: { isDoneColumn: false } }],
       },
       select: {

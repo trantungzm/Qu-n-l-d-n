@@ -14,6 +14,17 @@ describe('GET /api/tasks/reminders', () => {
     jest.clearAllMocks();
   });
 
+  it('queries only non-archived tasks whose project is also not archived, selecting Column.isDoneColumn (not Task.status)', async () => {
+    (prisma.task.findMany as jest.Mock).mockResolvedValue([]);
+
+    await GET();
+
+    expect(prisma.task.findMany).toHaveBeenCalledWith({
+      where: { archivedAt: null, project: { archivedAt: null } },
+      select: { dueDate: true, column: { select: { isDoneColumn: true } } },
+    });
+  });
+
   it('counts overdue/due-soon tasks using Column.isDoneColumn, not Task.status', async () => {
     const today = new Date();
     const overdueDate = new Date(today);
@@ -29,9 +40,6 @@ describe('GET /api/tasks/reminders', () => {
     const response = await GET();
     const body = await response.json();
 
-    expect(prisma.task.findMany).toHaveBeenCalledWith({
-      select: { dueDate: true, column: { select: { isDoneColumn: true } } },
-    });
     expect(body).toEqual({ count: 3 });
   });
 

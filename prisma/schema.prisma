@@ -13,10 +13,11 @@ datasource db {
 }
 
 model Project {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
   description String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  archivedAt  DateTime?
   tasks       Task[]
   columns     Column[]
 }
@@ -36,20 +37,21 @@ model Column {
 }
 
 model Task {
-  id        String    @id @default(uuid())
-  title     String
+  id         String    @id @default(uuid())
+  title      String
   /// @deprecated No longer read for business logic (dashboard, progress, reminders all use Column.isDoneColumn). Kept for backward-compat API fields only; candidate for removal in a future cleanup ticket.
-  status    String    @default("todo")
-  priority  String    @default("medium")
-  type      String    @default("feature")
-  order     Int       @default(0)
-  dueDate   DateTime?
-  columnId  String?
-  column    Column?   @relation(fields: [columnId], references: [id], onDelete: Cascade)
-  projectId String
-  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt DateTime  @default(now())
-  subTasks  SubTask[]
+  status     String    @default("todo")
+  priority   String    @default("medium")
+  type       String    @default("feature")
+  order      Int       @default(0)
+  dueDate    DateTime?
+  columnId   String?
+  column     Column?   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  projectId  String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  archivedAt DateTime?
+  subTasks   SubTask[]
 }
 
 model SubTask {

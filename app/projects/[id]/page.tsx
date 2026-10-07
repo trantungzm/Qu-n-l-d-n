@@ -19,7 +19,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Plus, Trash2, Pencil, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Pencil, ChevronLeft, ChevronRight, CheckCircle2, Archive } from 'lucide-react';
 import { CreateTaskDialog } from '@/components/create-task-dialog';
 import { EditTaskDialog } from '@/components/edit-task-dialog';
 import { ProjectProgressBar } from '@/components/project-progress-bar';
@@ -76,12 +76,14 @@ function TaskCard({
   isDoneColumn,
   onDelete,
   onEdit,
+  onArchive,
   onOpenDetail,
 }: {
   task: Task;
   isDoneColumn: boolean;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  onArchive: (taskId: string) => void;
   onOpenDetail: (task: Task) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -124,6 +126,17 @@ function TaskCard({
             className="h-8 w-8 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
           >
             <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onArchive(task.id);
+            }}
+            className="h-8 w-8 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
+          >
+            <Archive className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
@@ -185,6 +198,7 @@ function TaskColumn({
   onColumnDeleted,
   onDelete,
   onEdit,
+  onArchive,
   onOpenDetail,
   isFiltering,
 }: {
@@ -199,6 +213,7 @@ function TaskColumn({
   onColumnDeleted: (columnId: string) => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  onArchive: (taskId: string) => void;
   onOpenDetail: (task: Task) => void;
   isFiltering: boolean;
 }) {
@@ -272,6 +287,7 @@ function TaskColumn({
                 isDoneColumn={column.isDoneColumn}
                 onDelete={onDelete}
                 onEdit={onEdit}
+                onArchive={onArchive}
                 onOpenDetail={onOpenDetail}
               />
             ))
@@ -412,6 +428,21 @@ export default function ProjectDetailPage() {
       }
     } catch (error) {
       console.error('Failed to delete task:', error);
+    }
+  };
+
+  const handleArchiveTask = async (taskId: string) => {
+    try {
+      const response = await fetch(`/api/tasks/${taskId}/archive`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: true }),
+      });
+      if (response.ok) {
+        setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+      }
+    } catch (error) {
+      console.error('Failed to archive task:', error);
     }
   };
 
@@ -695,6 +726,7 @@ export default function ProjectDetailPage() {
                 onColumnDeleted={handleColumnDeleted}
                 onDelete={handleDeleteTask}
                 onEdit={setEditingTask}
+                onArchive={handleArchiveTask}
                 onOpenDetail={setViewingTask}
                 isFiltering={
                   Boolean(searchQuery.trim()) || priorityFilter !== 'all' || typeFilter !== 'all'

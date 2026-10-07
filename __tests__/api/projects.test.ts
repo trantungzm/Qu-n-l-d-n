@@ -17,14 +17,12 @@ describe('Project API Routes', () => {
     jest.clearAllMocks();
   });
 
-  describe('GET /api/projects (progress via Column.isDoneColumn)', () => {
-    it('computes progress from each task\'s column isDoneColumn flag, not Task.status', async () => {
+  describe('GET /api/projects (archived filtering + progress via Column.isDoneColumn)', () => {
+    it('defaults to only non-archived projects, excludes archived tasks, and computes progress from isDoneColumn (not Task.status)', async () => {
       (prisma.project.findMany as jest.Mock).mockResolvedValue([
         {
           id: 'project-1',
-          name: 'Project 1',
-          description: null,
-          createdAt: new Date().toISOString(),
+          name: 'Active project',
           _count: { tasks: 3 },
           tasks: [
             { column: { isDoneColumn: true } },
@@ -34,11 +32,32 @@ describe('Project API Routes', () => {
         },
       ]);
 
-      const response = await GET();
+      const response = await GET(new Request('http://localhost/api/projects'));
       const body = await response.json();
 
+      expect(prisma.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { archivedAt: null },
+          include: expect.objectContaining({
+            tasks: {
+              where: { archivedAt: null },
+              select: { column: { select: { isDoneColumn: true } } },
+            },
+          }),
+        })
+      );
       expect(response.status).toBe(200);
       expect(body[0].progress).toEqual({ done: 1, total: 3, percent: 33 });
+    });
+
+    it('returns only archived projects when ?archived=true', async () => {
+      (prisma.project.findMany as jest.Mock).mockResolvedValue([]);
+
+      await GET(new Request('http://localhost/api/projects?archived=true'));
+
+      expect(prisma.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { archivedAt: { not: null } } })
+      );
     });
   });
 

@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Folder, LayoutDashboard, LogOut } from 'lucide-react';
+import { Folder, LayoutDashboard, LogOut, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTaskReminderCount } from '@/lib/use-task-reminder-count';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dự án', icon: Folder },
+  { href: '/archived', label: 'Đã lưu trữ', icon: Archive },
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
 ];
 
