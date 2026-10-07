@@ -54,7 +54,6 @@ import { COLUMN_COLOR_CHIP_CLASSES, normalizeColumnColor } from '@/lib/column';
 interface Task {
   id: string;
   title: string;
-  status: string;
   projectId: string;
   createdAt: string;
   dueDate?: string | null;
@@ -74,12 +73,14 @@ interface Project {
 
 function TaskCard({
   task,
+  isDoneColumn,
   onDelete,
   onEdit,
   onArchive,
   onOpenDetail,
 }: {
   task: Task;
+  isDoneColumn: boolean;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
   onArchive: (taskId: string) => void;
@@ -172,7 +173,7 @@ function TaskCard({
         {task.dueDate && (
           <p
             className={`mt-2 text-xs font-medium ${
-              isTaskOverdue(task.dueDate, task.status)
+              isTaskOverdue(task.dueDate, isDoneColumn)
                 ? 'text-red-600 dark:text-red-400'
                 : 'text-gray-500 dark:text-gray-400'
             }`}
@@ -283,6 +284,7 @@ function TaskColumn({
               <TaskCard
                 key={task.id}
                 task={task}
+                isDoneColumn={column.isDoneColumn}
                 onDelete={onDelete}
                 onEdit={onEdit}
                 onArchive={onArchive}
@@ -321,9 +323,15 @@ export default function ProjectDetailPage() {
     typeFilter
   );
 
-  const progress = getProjectProgress(tasks);
-  const overdueCount = countOverdueTasks(tasks);
-  const openPriorityCounts = countOpenTasksByPriority(tasks);
+  const isDoneColumnById = new Map(columns.map((column) => [column.id, column.isDoneColumn]));
+  const tasksWithDoneFlag = tasks.map((task) => ({
+    ...task,
+    isDoneColumn: task.columnId ? isDoneColumnById.get(task.columnId) === true : false,
+  }));
+
+  const progress = getProjectProgress(tasksWithDoneFlag);
+  const overdueCount = countOverdueTasks(tasksWithDoneFlag);
+  const openPriorityCounts = countOpenTasksByPriority(tasksWithDoneFlag);
 
   const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
   const taskCountByColumnId = tasks.reduce<Record<string, number>>((counts, task) => {

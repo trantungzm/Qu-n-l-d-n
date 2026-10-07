@@ -12,13 +12,18 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' },
       include: {
         _count: { select: { tasks: true } },
-        tasks: { where: { archivedAt: null }, select: { status: true } },
+        tasks: {
+          where: { archivedAt: null },
+          select: { column: { select: { isDoneColumn: true } } },
+        },
       },
     });
 
     const projectsWithProgress = projects.map(({ tasks, ...project }) => ({
       ...project,
-      progress: getProjectProgress(tasks),
+      progress: getProjectProgress(
+        tasks.map((task) => ({ isDoneColumn: task.column?.isDoneColumn === true }))
+      ),
     }));
 
     return NextResponse.json(projectsWithProgress);

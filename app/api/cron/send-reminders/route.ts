@@ -22,22 +22,26 @@ export async function GET(request: Request) {
   try {
     const tasks = await prisma.task.findMany({
       where: {
-        status: { not: 'done' },
         dueDate: { not: null },
         archivedAt: null,
+        project: { archivedAt: null },
+        OR: [{ columnId: null }, { column: { isDoneColumn: false } }],
       },
       select: {
         id: true,
         title: true,
-        status: true,
         dueDate: true,
+        column: { select: { isDoneColumn: true } },
         project: { select: { name: true } },
       },
     });
 
     const now = new Date();
     const reminderTasks: ReminderEmailTask[] = tasks
-      .filter((task) => isTaskOverdue(task.dueDate, task.status, now) || isTaskDueSoon(task.dueDate, task.status, now))
+      .filter((task) => {
+        const isDoneColumn = task.column?.isDoneColumn === true;
+        return isTaskOverdue(task.dueDate, isDoneColumn, now) || isTaskDueSoon(task.dueDate, isDoneColumn, now);
+      })
       .map((task) => ({
         id: task.id,
         title: task.title,

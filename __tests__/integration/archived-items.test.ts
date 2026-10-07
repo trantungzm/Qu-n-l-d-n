@@ -110,6 +110,25 @@ describe('archivedAt filtering, restore, and permanent delete (real SQLite)', ()
     expect(await prisma.task.findUnique({ where: { id: task.id } })).toBeNull();
   });
 
+  it('excludes a non-archived Task from cross-project aggregates (reminders/dashboard) when its parent Project is archived', async () => {
+    const project = await prisma.project.create({ data: { name: 'Archived parent', archivedAt: new Date() } });
+    const task = await prisma.task.create({ data: { title: 'Still not archived itself', projectId: project.id } });
+
+    expect(task.archivedAt).toBeNull();
+
+    const aggregateVisible = await prisma.task.findMany({
+      where: { archivedAt: null, project: { archivedAt: null } },
+    });
+    expect(aggregateVisible.find((t) => t.id === task.id)).toBeUndefined();
+
+    await prisma.project.update({ where: { id: project.id }, data: { archivedAt: null } });
+
+    const aggregateAfterRestore = await prisma.task.findMany({
+      where: { archivedAt: null, project: { archivedAt: null } },
+    });
+    expect(aggregateAfterRestore.find((t) => t.id === task.id)).toBeDefined();
+  });
+
   it('archiving a Task hides it from the active per-project task list but restoring brings it back', async () => {
     const project = await prisma.project.create({ data: { name: 'Task archive project' } });
     const task = await prisma.task.create({ data: { title: 'Archive me', projectId: project.id } });

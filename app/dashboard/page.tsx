@@ -3,52 +3,50 @@ import { prisma } from '@/lib/prisma';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { AlertTriangle, ArrowRight, ListChecks } from 'lucide-react';
 import {
-  countTasksByStatus,
+  countTasksByDoneStatus,
   countOverdueTasks,
   countOpenTasksByPriority,
   getUpcomingTasks,
   type DashboardTask,
-  type StatusCounts,
+  type DoneStatusCounts,
 } from '@/lib/dashboard-stats';
 import { PRIORITY_LABELS, PRIORITY_BADGE_CLASSES } from '@/lib/task-priority';
 import { formatDueDate } from '@/lib/task-due-date';
 
 export const dynamic = 'force-dynamic';
 
-const STATUS_ORDER = ['todo', 'doing', 'done'] as const;
+const DONE_STATUS_ORDER = ['done', 'open'] as const;
 
-const STATUS_LABELS: Record<(typeof STATUS_ORDER)[number], string> = {
-  todo: 'Todo',
-  doing: 'Doing',
-  done: 'Done',
+const DONE_STATUS_LABELS: Record<(typeof DONE_STATUS_ORDER)[number], string> = {
+  done: 'Đã hoàn thành',
+  open: 'Đang mở',
 };
 
-const STATUS_COLORS: Record<(typeof STATUS_ORDER)[number], string> = {
-  todo: '#94a3b8',
-  doing: '#3b82f6',
+const DONE_STATUS_COLORS: Record<(typeof DONE_STATUS_ORDER)[number], string> = {
   done: '#22c55e',
+  open: '#94a3b8',
 };
 
 const PRIORITY_ORDER = ['high', 'medium', 'low'] as const;
 
 async function getDashboardTasks(): Promise<DashboardTask[]> {
   const tasks = await prisma.task.findMany({
-    where: { archivedAt: null },
+    where: { archivedAt: null, project: { archivedAt: null } },
     select: {
       id: true,
       title: true,
-      status: true,
       priority: true,
       dueDate: true,
       projectId: true,
       project: { select: { name: true } },
+      column: { select: { isDoneColumn: true } },
     },
   });
 
   return tasks.map((task) => ({
     id: task.id,
     title: task.title,
-    status: task.status,
+    isDoneColumn: task.column?.isDoneColumn === true,
     priority: task.priority,
     dueDate: task.dueDate,
     projectId: task.projectId,
@@ -56,19 +54,19 @@ async function getDashboardTasks(): Promise<DashboardTask[]> {
   }));
 }
 
-function buildStatusConicGradient(statusCounts: StatusCounts): string {
-  const total = statusCounts.todo + statusCounts.doing + statusCounts.done;
+function buildDoneConicGradient(doneCounts: DoneStatusCounts): string {
+  const total = doneCounts.done + doneCounts.open;
   if (total === 0) return '#9ca3af';
 
   let cursor = 0;
   const segments: string[] = [];
-  for (const key of STATUS_ORDER) {
-    const count = statusCounts[key];
+  for (const key of DONE_STATUS_ORDER) {
+    const count = doneCounts[key];
     if (count === 0) continue;
     const start = (cursor / total) * 360;
     cursor += count;
     const end = (cursor / total) * 360;
-    segments.push(`${STATUS_COLORS[key]} ${start}deg ${end}deg`);
+    segments.push(`${DONE_STATUS_COLORS[key]} ${start}deg ${end}deg`);
   }
   return `conic-gradient(${segments.join(', ')})`;
 }
@@ -76,12 +74,12 @@ function buildStatusConicGradient(statusCounts: StatusCounts): string {
 export default async function DashboardPage() {
   const tasks = await getDashboardTasks();
 
-  const statusCounts = countTasksByStatus(tasks);
+  const doneCounts = countTasksByDoneStatus(tasks);
   const overdueCount = countOverdueTasks(tasks);
   const priorityCounts = countOpenTasksByPriority(tasks);
   const upcomingTasks = getUpcomingTasks(tasks);
 
-  const totalTasks = statusCounts.todo + statusCounts.doing + statusCounts.done;
+  const totalTasks = doneCounts.done + doneCounts.open;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900">
@@ -135,23 +133,23 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <Card>
             <CardHeader>
-              <CardTitle>Task theo trạng thái</CardTitle>
+              <CardTitle>Task theo tiến độ</CardTitle>
               <CardDescription>Tổng {totalTasks} task trên tất cả dự án</CardDescription>
             </CardHeader>
             <CardContent className="flex items-center gap-6">
               <div
                 className="h-32 w-32 shrink-0 rounded-full"
-                style={{ background: buildStatusConicGradient(statusCounts) }}
+                style={{ background: buildDoneConicGradient(doneCounts) }}
                 aria-hidden="true"
               />
               <ul className="space-y-2 flex-1">
-                {STATUS_ORDER.map((key) => (
+                {DONE_STATUS_ORDER.map((key) => (
                   <li key={key} className="flex items-center justify-between text-sm">
                     <span className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: STATUS_COLORS[key] }} />
-                      {STATUS_LABELS[key]}
+                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: DONE_STATUS_COLORS[key] }} />
+                      {DONE_STATUS_LABELS[key]}
                     </span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">{statusCounts[key]}</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{doneCounts[key]}</span>
                   </li>
                 ))}
               </ul>

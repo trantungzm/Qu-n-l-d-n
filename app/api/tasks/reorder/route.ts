@@ -30,13 +30,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const columnIds = Array.from(new Set(updates.map((update: ReorderUpdate) => update.columnId)));
-    const columns = await prisma.column.findMany({
-      where: { id: { in: columnIds } },
-      select: { id: true, isDoneColumn: true },
-    });
-    const isDoneColumnById = new Map(columns.map((column) => [column.id, column.isDoneColumn]));
-
     const tasks = await prisma.$transaction(
       updates.map((update: ReorderUpdate) =>
         prisma.task.update({
@@ -44,7 +37,6 @@ export async function POST(request: Request) {
           data: {
             columnId: update.columnId,
             order: update.order,
-            status: isDoneColumnById.get(update.columnId) ? 'done' : 'todo',
           },
         })
       )

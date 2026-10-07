@@ -39,6 +39,7 @@ model Column {
 model Task {
   id         String    @id @default(uuid())
   title      String
+  /// @deprecated No longer read for business logic (dashboard, progress, reminders all use Column.isDoneColumn). Kept for backward-compat API fields only; candidate for removal in a future cleanup ticket.
   status     String    @default("todo")
   priority   String    @default("medium")
   type       String    @default("feature")

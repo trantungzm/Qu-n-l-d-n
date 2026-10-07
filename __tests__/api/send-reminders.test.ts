@@ -67,14 +67,17 @@ describe('GET /api/cron/send-reminders', () => {
     expect(mockSend).not.toHaveBeenCalled();
   });
 
-  it('queries only non-archived tasks', async () => {
+  it('queries only non-archived tasks whose project is also not archived', async () => {
     (prisma.task.findMany as jest.Mock).mockResolvedValue([]);
 
     await GET(makeRequest({ authorization: 'Bearer test-secret' }));
 
     expect(prisma.task.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ archivedAt: null }),
+        where: expect.objectContaining({
+          archivedAt: null,
+          project: { archivedAt: null },
+        }),
       })
     );
   });
@@ -88,22 +91,22 @@ describe('GET /api/cron/send-reminders', () => {
       {
         id: 'task-1',
         title: 'Overdue task',
-        status: 'todo',
         dueDate: overdueDate,
+        column: { isDoneColumn: false },
         project: { name: 'Project A' },
       },
       {
         id: 'task-2',
         title: 'Due today task',
-        status: 'doing',
         dueDate: today,
+        column: { isDoneColumn: false },
         project: { name: 'Project B' },
       },
       {
         id: 'task-3',
         title: 'Already done task',
-        status: 'done',
         dueDate: overdueDate,
+        column: { isDoneColumn: true },
         project: { name: 'Project A' },
       },
     ]);
@@ -119,5 +122,27 @@ describe('GET /api/cron/send-reminders', () => {
     expect(emailArgs.text).toContain('Overdue task');
     expect(emailArgs.text).toContain('Due today task');
     expect(emailArgs.text).not.toContain('Already done task');
+  });
+
+  it('includes an overdue task sitting in a columnless state (no column assigned yet)', async () => {
+    const today = new Date();
+    const overdueDate = new Date(today);
+    overdueDate.setDate(overdueDate.getDate() - 2);
+
+    (prisma.task.findMany as jest.Mock).mockResolvedValue([
+      {
+        id: 'task-1',
+        title: 'Columnless overdue task',
+        dueDate: overdueDate,
+        column: null,
+        project: { name: 'Project A' },
+      },
+    ]);
+
+    const response = await GET(makeRequest({ authorization: 'Bearer test-secret' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ sent: true, count: 1 });
   });
 });

@@ -20,9 +20,9 @@ describe('POST /api/projects/[id]/tasks (column defaulting)', () => {
   });
 
   it('defaults into the project\'s first column by order when no columnId is given', async () => {
-    (prisma.column.findFirst as jest.Mock).mockResolvedValue({ id: 'col-todo', isDoneColumn: false });
+    (prisma.column.findFirst as jest.Mock).mockResolvedValue({ id: 'col-todo' });
     (prisma.task.findFirst as jest.Mock).mockResolvedValue(null);
-    (prisma.task.create as jest.Mock).mockResolvedValue({ id: 'task-1', columnId: 'col-todo', status: 'todo' });
+    (prisma.task.create as jest.Mock).mockResolvedValue({ id: 'task-1', columnId: 'col-todo' });
 
     const response = await POST(
       new Request('http://localhost/api/projects/project-1/tasks', {
@@ -36,20 +36,20 @@ describe('POST /api/projects/[id]/tasks (column defaulting)', () => {
     expect(prisma.column.findFirst).toHaveBeenCalledWith({
       where: { projectId: 'project-1' },
       orderBy: { order: 'asc' },
-      select: { id: true, isDoneColumn: true },
+      select: { id: true },
     });
     expect(prisma.task.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ columnId: 'col-todo', status: 'todo', order: 0 }),
+        data: expect.objectContaining({ columnId: 'col-todo', order: 0 }),
       })
     );
     expect(response.status).toBe(201);
   });
 
-  it('uses the given columnId and derives status "done" when it is the done column', async () => {
-    (prisma.column.findUnique as jest.Mock).mockResolvedValue({ id: 'col-done', isDoneColumn: true });
+  it('uses the given columnId as-is, regardless of whether it is the done column', async () => {
+    (prisma.column.findUnique as jest.Mock).mockResolvedValue({ id: 'col-done' });
     (prisma.task.findFirst as jest.Mock).mockResolvedValue({ order: 2 });
-    (prisma.task.create as jest.Mock).mockResolvedValue({ id: 'task-1', columnId: 'col-done', status: 'done' });
+    (prisma.task.create as jest.Mock).mockResolvedValue({ id: 'task-1', columnId: 'col-done' });
 
     await POST(
       new Request('http://localhost/api/projects/project-1/tasks', {
@@ -62,18 +62,20 @@ describe('POST /api/projects/[id]/tasks (column defaulting)', () => {
 
     expect(prisma.column.findUnique).toHaveBeenCalledWith({
       where: { id: 'col-done' },
-      select: { id: true, isDoneColumn: true },
+      select: { id: true },
     });
     expect(prisma.task.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ columnId: 'col-done', status: 'done', order: 1 }),
+        data: expect.objectContaining({ columnId: 'col-done', order: 1 }),
       })
     );
+    const createArgs = (prisma.task.create as jest.Mock).mock.calls[0][0];
+    expect(createArgs.data).not.toHaveProperty('status');
   });
 
-  it('creates a columnless task with default status when the project has no columns', async () => {
+  it('creates a columnless task when the project has no columns', async () => {
     (prisma.column.findFirst as jest.Mock).mockResolvedValue(null);
-    (prisma.task.create as jest.Mock).mockResolvedValue({ id: 'task-1', columnId: null, status: 'todo' });
+    (prisma.task.create as jest.Mock).mockResolvedValue({ id: 'task-1', columnId: null });
 
     await POST(
       new Request('http://localhost/api/projects/project-1/tasks', {
@@ -87,7 +89,7 @@ describe('POST /api/projects/[id]/tasks (column defaulting)', () => {
     expect(prisma.task.findFirst).not.toHaveBeenCalled();
     expect(prisma.task.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ columnId: null, status: 'todo', order: 0 }),
+        data: expect.objectContaining({ columnId: null, order: 0 }),
       })
     );
   });
