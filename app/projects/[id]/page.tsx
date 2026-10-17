@@ -46,6 +46,12 @@ import {
   TYPE_ICONS,
   TYPE_LABELS,
 } from '@/lib/task-type';
+import {
+  filterTasksByLabel,
+  normalizeLabelColor,
+  LABEL_COLOR_CHIP_CLASSES,
+  type TaskLabel,
+} from '@/lib/label';
 import { getProjectProgress, countOverdueTasks, countOpenTasksByPriority } from '@/lib/dashboard-stats';
 import { TaskDetailDialog, type SubTask } from '@/components/task-detail-dialog';
 import { ColumnMenu, AddColumnTile, type ProjectColumn } from '@/components/column-manager';
@@ -62,6 +68,7 @@ interface Task {
   order: number;
   columnId: string | null;
   subTasks: SubTask[];
+  labels: TaskLabel[];
 }
 
 interface Project {
@@ -169,6 +176,26 @@ function TaskCard({
             {PRIORITY_LABELS[normalizeTaskPriority(task.priority)]}
           </span>
         </div>
+
+        {task.labels?.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-1">
+            {task.labels.slice(0, 3).map((label) => (
+              <span
+                key={label.id}
+                className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                  LABEL_COLOR_CHIP_CLASSES[normalizeLabelColor(label.color)]
+                }`}
+              >
+                {label.name}
+              </span>
+            ))}
+            {task.labels.length > 3 && (
+              <span className="inline-block rounded-full border border-gray-300 px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:border-gray-600 dark:text-gray-400">
+                +{task.labels.length - 3}
+              </span>
+            )}
+          </div>
+        )}
 
         {task.dueDate && (
           <p
@@ -306,21 +333,27 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [columns, setColumns] = useState<ProjectColumn[]>([]);
+  const [labels, setLabels] = useState<TaskLabel[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reorderError, setReorderError] = useState(false);
+  const [labelDeleteError, setLabelDeleteError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [movingColumnId, setMovingColumnId] = useState<string | null>(null);
+  const [labelFilter, setLabelFilter] = useState('all');
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
-  const filteredTasks = filterTasksByType(
-    filterTasksByPriority(filterTasksByTitle(tasks, searchQuery), priorityFilter),
-    typeFilter
+  const filteredTasks = filterTasksByLabel(
+    filterTasksByType(
+      filterTasksByPriority(filterTasksByTitle(tasks, searchQuery), priorityFilter),
+      typeFilter
+    ),
+    labelFilter
   );
 
   const isDoneColumnById = new Map(columns.map((column) => [column.id, column.isDoneColumn]));
@@ -413,6 +446,48 @@ export default function ProjectDetailPage() {
       console.error('Failed to reorder column:', error);
     } finally {
       setMovingColumnId(null);
+    }
+  };
+
+  const fetchLabels = async () => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/labels`);
+      const data = await response.json();
+      if (!response.ok) throw new Error('Failed to load labels');
+      setLabels(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Failed to fetch labels:', error);
+    }
+  };
+
+  const handleDeleteLabel = async (label: TaskLabel): Promise<boolean> => {
+    const prevLabels = labels;
+    const prevTasks = tasks;
+
+    setLabelDeleteError(false);
+    setLabels((currentLabels) => currentLabels.filter((l) => l.id !== label.id));
+    setTasks((currentTasks) =>
+      currentTasks.map((task) => ({
+        ...task,
+        labels: task.labels.filter((l) => l.id !== label.id),
+      }))
+    );
+
+    try {
+      const response = await fetch(`/api/labels/${label.id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        setLabels(prevLabels);
+        setTasks(prevTasks);
+        setLabelDeleteError(true);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Failed to delete label:', error);
+      setLabels(prevLabels);
+      setTasks(prevTasks);
+      setLabelDeleteError(true);
+      return false;
     }
   };
 
@@ -529,6 +604,7 @@ export default function ProjectDetailPage() {
     fetchProject();
     fetchTasks();
     fetchColumns();
+    fetchLabels();
   }, [projectId]);
 
   if (loading) {
@@ -699,12 +775,35 @@ export default function ProjectDetailPage() {
               </option>
             ))}
           </Select>
+
+          <Select
+            value={labelFilter}
+            onChange={(event) => setLabelFilter(event.target.value)}
+            aria-label="Lọc theo nhãn"
+            className="sm:w-48"
+          >
+            <option value="all">Tất cả nhãn</option>
+            {labels.map((label) => (
+              <option key={label.id} value={label.id}>
+                {label.name}
+              </option>
+            ))}
+          </Select>
         </div>
 
         {reorderError && (
           <Alert className="mb-6">
             <p className="font-medium">Không lưu được thứ tự task, task đã được khôi phục</p>
             <Button variant="outline" className="mt-3" onClick={() => setReorderError(false)}>
+              Đã hiểu
+            </Button>
+          </Alert>
+        )}
+
+        {labelDeleteError && (
+          <Alert className="mb-6">
+            <p className="font-medium">Không xóa được nhãn, đã khôi phục</p>
+            <Button variant="outline" className="mt-3" onClick={() => setLabelDeleteError(false)}>
               Đã hiểu
             </Button>
           </Alert>
@@ -729,7 +828,10 @@ export default function ProjectDetailPage() {
                 onArchive={handleArchiveTask}
                 onOpenDetail={setViewingTask}
                 isFiltering={
-                  Boolean(searchQuery.trim()) || priorityFilter !== 'all' || typeFilter !== 'all'
+                  Boolean(searchQuery.trim()) ||
+                  priorityFilter !== 'all' ||
+                  typeFilter !== 'all' ||
+                  labelFilter !== 'all'
                 }
               />
             ))}
@@ -751,6 +853,10 @@ export default function ProjectDetailPage() {
           }}
           onTaskUpdated={handleTaskUpdated}
           task={editingTask}
+          projectId={projectId}
+          labels={labels}
+          onLabelsChanged={setLabels}
+          onDeleteLabel={handleDeleteLabel}
         />
 
         <TaskDetailDialog

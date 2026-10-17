@@ -62,7 +62,7 @@ describe('loading and error recovery', () => {
       createdAt: '2026-08-28T00:00:00.000Z',
     };
     let projectsAttempts = 0;
-    const fetchMock = jest.fn((url: RequestInfo | URL) => {
+    const fetchMock = jest.fn((url: RequestInfo | URL, _init?: RequestInit) => {
       if (url === '/api/tasks/reminders') {
         return Promise.resolve({ ok: true, json: async () => ({ count: 0 }) });
       }
@@ -108,13 +108,22 @@ describe('loading and error recovery', () => {
       order: 0,
       columnId: 'col-todo',
     };
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => [project] })
-      .mockResolvedValueOnce({ ok: true, json: async () => [task] })
-      .mockResolvedValueOnce({ ok: true, json: async () => columns })
-      .mockResolvedValueOnce({ ok: false, json: async () => ({}) });
-    global.fetch = fetchMock as typeof fetch;
+    const fetchMock = jest.fn((url: RequestInfo | URL, _init?: RequestInit) => {
+      if (typeof url === 'string' && url.endsWith('/labels')) {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (typeof url === 'string' && url.endsWith('/columns')) {
+        return Promise.resolve({ ok: true, json: async () => columns });
+      }
+      if (typeof url === 'string' && url.endsWith('/tasks')) {
+        return Promise.resolve({ ok: true, json: async () => [task] });
+      }
+      if (url === '/api/projects') {
+        return Promise.resolve({ ok: true, json: async () => [project] });
+      }
+      return Promise.resolve({ ok: false, json: async () => ({}) });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
 
     render(<ProjectDetailPage />);
     await screen.findByText('Rollback me');
@@ -134,9 +143,11 @@ describe('loading and error recovery', () => {
       expect(within(doingColumn as HTMLElement).queryByText('Rollback me')).not.toBeInTheDocument();
     });
     expect(screen.getByText('Không lưu được thứ tự task, task đã được khôi phục')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      4,
-      '/api/tasks/reorder',
+    // Looked up by URL rather than call index: fetchColumns + fetchLabels add
+    // two more calls ahead of the reorder POST, so a fixed nth-call assertion
+    // would be fragile here.
+    const reorderCall = fetchMock.mock.calls.find(([url]) => url === '/api/tasks/reorder');
+    expect(reorderCall?.[1]).toEqual(
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ updates: [{ id: 'task-1', columnId: 'col-doing', order: 0 }] }),
@@ -172,13 +183,22 @@ describe('loading and error recovery', () => {
       order: 1,
       columnId: 'col-todo',
     };
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => [project] })
-      .mockResolvedValueOnce({ ok: true, json: async () => [taskA, taskB] })
-      .mockResolvedValueOnce({ ok: true, json: async () => columns })
-      .mockResolvedValueOnce({ ok: false, json: async () => ({}) });
-    global.fetch = fetchMock as typeof fetch;
+    const fetchMock = jest.fn((url: RequestInfo | URL, _init?: RequestInit) => {
+      if (typeof url === 'string' && url.endsWith('/labels')) {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (typeof url === 'string' && url.endsWith('/columns')) {
+        return Promise.resolve({ ok: true, json: async () => columns });
+      }
+      if (typeof url === 'string' && url.endsWith('/tasks')) {
+        return Promise.resolve({ ok: true, json: async () => [taskA, taskB] });
+      }
+      if (url === '/api/projects') {
+        return Promise.resolve({ ok: true, json: async () => [project] });
+      }
+      return Promise.resolve({ ok: false, json: async () => ({}) });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
 
     render(<ProjectDetailPage />);
     await screen.findByText('Task A');
@@ -197,10 +217,7 @@ describe('loading and error recovery', () => {
       expect(titlesAfter).toEqual(['Task A', 'Task B']);
     });
     expect(screen.getByText('Không lưu được thứ tự task, task đã được khôi phục')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      4,
-      '/api/tasks/reorder',
-      expect.objectContaining({ method: 'POST' }),
-    );
+    const reorderCall = fetchMock.mock.calls.find(([url]) => url === '/api/tasks/reorder');
+    expect(reorderCall?.[1]).toEqual(expect.objectContaining({ method: 'POST' }));
   });
 });

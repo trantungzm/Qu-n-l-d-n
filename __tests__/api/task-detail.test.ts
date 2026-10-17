@@ -45,6 +45,7 @@ describe('PATCH /api/tasks/[id] (edit title/dueDate)', () => {
         title: 'Updated title',
         dueDate: new Date('2026-12-31'),
       },
+      include: { labels: true },
     });
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(mockTask);
@@ -98,6 +99,7 @@ describe('PATCH /api/tasks/[id] (edit title/dueDate)', () => {
         title: 'Task without due date',
         dueDate: null,
       },
+      include: { labels: true },
     });
     expect(response.status).toBe(200);
   });

@@ -36,6 +36,7 @@ next-env.d.ts
 # prisma
 prisma/dev.db
 prisma/dev.db-journal
+__tests__/integration/.tmp-*.db*
 
 # throwaway sqlite dbs from __tests__/integration/* (best-effort cleanup can
 # fail to unlink a locked file, e.g. on Windows)

@@ -20,6 +20,7 @@ model Project {
   archivedAt  DateTime?
   tasks       Task[]
   columns     Column[]
+  labels      Label[]
 }
 
 model Column {
@@ -52,6 +53,21 @@ model Task {
   createdAt  DateTime  @default(now())
   archivedAt DateTime?
   subTasks   SubTask[]
+  labels     Label[]
+
+  @@index([columnId])
+}
+
+model Label {
+  id        String   @id @default(uuid())
+  name      String
+  color     String   @default("gray")
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, name])
 }
 
 model SubTask {
