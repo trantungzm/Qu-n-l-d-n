@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { legacyDoneToStatus, normalizeTaskStatus } from '@/lib/task-status';
 import { normalizeTaskPriority } from '@/lib/task-priority';
@@ -10,15 +11,9 @@ export async function PATCH(
 ) {
   try {
     const body = await request.json();
-    const { status, done, title, dueDate, priority, type } = body;
+    const { status, done, title, dueDate, priority, type, labelIds } = body;
 
-    const data: {
-      status?: string;
-      title?: string;
-      dueDate?: Date | null;
-      priority?: string;
-      type?: string;
-    } = {};
+    const data: Prisma.TaskUpdateInput = {};
 
     if (status !== undefined || done !== undefined) {
       data.status = status
@@ -59,9 +54,22 @@ export async function PATCH(
       }
     }
 
+    if (labelIds !== undefined) {
+      if (!Array.isArray(labelIds) || !labelIds.every((id) => typeof id === 'string')) {
+        return NextResponse.json(
+          { error: 'labelIds must be an array of strings' },
+          { status: 400 }
+        );
+      }
+      // Replace the Task's full label set in one go, matching the edit dialog's
+      // multi-select which always submits the complete desired selection.
+      data.labels = { set: labelIds.map((id: string) => ({ id })) };
+    }
+
     const task = await prisma.task.update({
       where: { id: params.id },
       data,
+      include: { labels: true },
     });
 
     return NextResponse.json(task);
